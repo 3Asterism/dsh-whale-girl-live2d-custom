@@ -448,15 +448,44 @@ Diagnostics page: `http://127.0.0.1:3080/dsh-pet/diag`.
   "lookAtCursor": true,
   "talkMouth": true,
   "sleepAfterMs": 180000,
-  "showReasoning": false
+  "showReasoning": false,
+  "walletProvider": "deepseek",
+  "walletCredentialKey": "",
+  "walletCustom": {
+    "balanceUrl": "",
+    "currency": "USD",
+    "totalBalancePath": "",
+    "todayUsagePath": ""
+  }
 }
 ```
 
 `enabled: false` 会连注入脚本一起去掉（改完要重启 DSH）。
 
+### 钱包记账换厂商
+
+右键弹出来的钱包默认读 DeepSeek 官方余额接口，不想用这个可以换：
+
+| `walletProvider` | 凭据名（默认） | 说明 |
+| --- | --- | --- |
+| `"deepseek"`（默认） | `DEEPSEEK_API_KEY` | 官方 `/user/balance`，「今日已用」靠余额差分算 |
+| `"openrouter"` | `OPENROUTER_API_KEY` | 官方 `/api/v1/key`，普通 API key 就能查（不用 management key），直接给「今日已用」 |
+| `"custom"` | 自己填 `walletCredentialKey` | 见下 |
+
+凭据名要跟 DSH「新增模型（自定义 API）」那个界面里填的一致（比如 OpenRouter 模板默认就是
+`OPENROUTER_API_KEY`），插件会去凭据服务里用这个名字取 key，取不到再退回同名环境变量。
+
+`walletProvider: "custom"` 时填 `walletCustom`：`balanceUrl` 是查询地址（`Authorization: Bearer <key>`
+头），`totalBalancePath`/`todayUsagePath` 是从返回的 JSON 里取值的点号路径（比如响应是
+`{"data":{"limit_remaining":12.3}}`，就填 `"data.limit_remaining"`）；`todayUsagePath` 留空会退回
+余额差分算「今日已用」。
+
 > **English**: defaults live in `DEFAULT_CONFIG` in `lib/index.js`; override them in
 > `~/.dsh/dsh-live2d-pet.json` (the filename intentionally keeps the old name). Changing `enabled` requires
-> a DSH restart.
+> a DSH restart. The wallet HUD can read a different provider's balance instead of DeepSeek's official
+> endpoint — set `walletProvider` to `"openrouter"` (reads `/api/v1/key`, works with a regular API key) or
+> `"custom"` (point `walletCustom.balanceUrl` at any JSON endpoint and give dotted paths to the fields you
+> want, e.g. `"data.limit_remaining"`).
 
 ---
 

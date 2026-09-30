@@ -700,15 +700,22 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
 .dshp-panel.dshp-flip{bottom:auto;top:calc(100% + 10px * var(--dshp-ps));
   transform:translateX(calc(-50% + var(--dshp-shift,0px))) translateY(calc(-4px + var(--dshp-shift-y,0px)))}
 .dshp-panel.dshp-flip.dshp-on{transform:translateX(calc(-50% + var(--dshp-shift,0px))) translateY(var(--dshp-shift-y,0px))}
-.dshp-panel textarea{width:100%;box-sizing:border-box;resize:none;
-  height:calc(64px * var(--dshp-ps));font:inherit;
-  color:inherit;background:transparent;border:1px solid var(--dshp-line);
+.dshp-panel textarea,.dshp-field input[type=text],.dshp-field select{width:100%;box-sizing:border-box;
+  font:inherit;color:inherit;background:transparent;border:1px solid var(--dshp-line);
   border-radius:calc(9px * var(--dshp-ps));
   padding:calc(7px * var(--dshp-ps)) calc(9px * var(--dshp-ps));outline:none}
-.dshp-panel textarea:focus{border-color:var(--dshp-accent)}
+.dshp-panel textarea{resize:none;height:calc(64px * var(--dshp-ps))}
+.dshp-panel textarea:focus,.dshp-field input[type=text]:focus,.dshp-field select:focus{border-color:var(--dshp-accent)}
+/* 标签 + 输入框竖排：面板就 ~270-320px 宽，标签和输入框并排会挤，
+   竖排在小尺寸下也不会截断，宽度富余的时候看着也不空。 */
+.dshp-field{display:block;margin-top:calc(8px * var(--dshp-ps))}
+.dshp-field-label{display:block;font-size:calc(11px * var(--dshp-ps));opacity:.65;
+  margin-bottom:calc(3px * var(--dshp-ps))}
 .dshp-row{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap}
 .dshp-grow{flex:1}
-.dshp-tabs{display:flex;gap:3px;margin-bottom:7px;border-bottom:1px solid var(--dshp-line);padding-bottom:6px}
+/* 6 个标签页在最窄的面板宽度下可能放不下一整行，允许换到第二行，
+   总比横向溢出被截断好 */
+.dshp-tabs{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:7px;border-bottom:1px solid var(--dshp-line);padding-bottom:6px}
 .dshp-tab-btn{border:none;background:transparent;color:inherit;opacity:.6;font:inherit;font-size:11.5px;
   padding:3px 9px;border-radius:7px;cursor:pointer}
 .dshp-tab-btn.dshp-active{opacity:1;background:rgba(124,92,255,.14);color:var(--dshp-accent);font-weight:600}
@@ -3361,10 +3368,13 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     const peak = d.isPeak === true
     h.badge.textContent = d.isPeak === undefined || d.isPeak === null ? '—' : peak ? '峰' : '谷'
     h.badge.className = 'dshp-hud-tag ' + (peak ? 'dshp-peak' : 'dshp-valley')
-    if (d.ok === false && d.code === 'NO_KEY') {
+    if (d.code === 'NO_KEY') {
+      // 注意：这里判的是 d.code，不是 d.ok——hudFetch() 把自家宿主的响应
+      // 摊平进 hud.data 时，ok 恒为 true（错误信息单独塞进 code/errText），
+      // 判 d.ok === false 会永远走不到这条分支，之前一直是死代码。
       h.money.textContent = '未配置'
-      h.foot.textContent = '没读到 DEEPSEEK_API_KEY，所以看不到余额。\n在 DSH 里配好 key 就能显示。'
-    } else if (d.ok === false) {
+      h.foot.textContent = (d.errText || '没配置凭据，所以看不到余额。') + '\n在 DSH 里配好对应的 API key 就能显示。'
+    } else if (d.code) {
       h.money.textContent = '—'
     } else if (!hud.data) {
       h.money.textContent = '—'
@@ -3394,7 +3404,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
 
     const src = []
     if (!hud.source) src.push('数据：读不到余额接口')
-    else if (hud.source === 'self') src.push('数据：桌宠自带记账' + (d.version ? ' v' + d.version : ''))
+    else if (hud.source === 'self') src.push('数据：桌宠自带记账' + (d.version ? ' v' + d.version : '') + (d.provider ? ' · ' + d.provider : ''))
     else src.push('数据：dsh-whale-widget' + (d.version ? ' v' + d.version : ''))
     if (hud.err) src.push(hud.err)
     if (t.ts) src.push('本轮：' + new Date(t.ts).toLocaleTimeString('zh-CN', { hour12: false }))
@@ -3427,6 +3437,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         currency: (self.balance && self.balance.currency) || 'CNY',
         todayUsage: self.today ? self.today.amount : undefined,
         todayUsageCurrency: (self.balance && self.balance.currency) || 'CNY',
+        provider: self.balance && self.balance.provider,
       }
       if (self.balance && self.balance.ok === false) {
         hud.data.code = self.balance.code
@@ -3738,6 +3749,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       ['scene', '场景'],
       ['action', '动作'],
       ['setting', '设置'],
+      ['config', '配置'],
     ]
     u.menu.focused = 'face'
     for (const [id, label] of TABS) {
@@ -3890,6 +3902,150 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         grid,
         $('div', 'dshp-hint', '动作是**一次性的**：演一遍就自己消失，不会一直挂着。\n（要一直留着的，去「装饰」和「场景」两页——蛋包饭也在这页，挤完酱就没了。）'),
       )
+      return
+    }
+    if (id === 'config') {
+      // 右键钱包读哪个厂商的余额，在这页配；API key 本身不经过这里——
+      // 还是走 DSH 自己的「新增模型（自定义 API）」凭据管理，这里只填
+      // 「用哪个凭据名去读」，跟 DSH 那边填的凭据名对上就行。
+      const box = $('div')
+      box.append(
+        $(
+          'div',
+          'dshp-hint',
+          '配右键钱包读哪家的余额。API key 本身不填在这——去 DSH「新增模型（自定义 API）」那边配好凭据，这里只填用哪个凭据名去读。',
+        ),
+      )
+
+      const providerField = $('label', 'dshp-field')
+      providerField.append($('span', 'dshp-field-label', '记账厂商'))
+      const providerSel = document.createElement('select')
+      for (const [val, text] of [
+        ['deepseek', 'DeepSeek 官方'],
+        ['openrouter', 'OpenRouter'],
+        ['custom', '自定义 API'],
+      ]) {
+        const opt = document.createElement('option')
+        opt.value = val
+        opt.textContent = text
+        providerSel.appendChild(opt)
+      }
+      providerField.appendChild(providerSel)
+
+      const credField = $('label', 'dshp-field')
+      credField.append($('span', 'dshp-field-label', '凭据名（留空用厂商默认）'))
+      const credInput = document.createElement('input')
+      credInput.type = 'text'
+      credField.appendChild(credInput)
+
+      // 只有「自定义 API」才需要下面这几个字段，整体一起显隐
+      const customBox = $('div')
+      const urlField = $('label', 'dshp-field')
+      urlField.append($('span', 'dshp-field-label', '接口地址'))
+      const urlInput = document.createElement('input')
+      urlInput.type = 'text'
+      urlInput.placeholder = 'https://example.com/api/balance'
+      urlField.appendChild(urlInput)
+
+      const curField = $('label', 'dshp-field')
+      curField.append($('span', 'dshp-field-label', '币种'))
+      const curInput = document.createElement('input')
+      curInput.type = 'text'
+      curInput.placeholder = 'USD'
+      curField.appendChild(curInput)
+
+      const totalPathField = $('label', 'dshp-field')
+      totalPathField.append($('span', 'dshp-field-label', '余额取值路径（点号分隔，比如 data.limit_remaining）'))
+      const totalPathInput = document.createElement('input')
+      totalPathInput.type = 'text'
+      totalPathInput.placeholder = 'data.limit_remaining'
+      totalPathField.appendChild(totalPathInput)
+
+      const todayPathField = $('label', 'dshp-field')
+      todayPathField.append($('span', 'dshp-field-label', '今日已用取值路径（留空则用余额差分估算）'))
+      const todayPathInput = document.createElement('input')
+      todayPathInput.type = 'text'
+      todayPathInput.placeholder = 'data.usage_daily'
+      todayPathField.appendChild(todayPathInput)
+
+      customBox.append(urlField, curField, totalPathField, todayPathField)
+
+      const CRED_DEFAULT = { deepseek: 'DEEPSEEK_API_KEY', openrouter: 'OPENROUTER_API_KEY', custom: '' }
+      function syncConfigVisibility() {
+        const isCustom = providerSel.value === 'custom'
+        customBox.style.display = isCustom ? '' : 'none'
+        credInput.placeholder = CRED_DEFAULT[providerSel.value] || '凭据名'
+      }
+      providerSel.addEventListener('change', syncConfigVisibility)
+      syncConfigVisibility()
+
+      const row = $('div', 'dshp-row')
+      const saveBtn = $('button', 'dshp-btn dshp-primary', '保存')
+      const testBtn = $('button', 'dshp-btn', '保存并测试连接')
+      row.append(saveBtn, testBtn)
+      const statusText = $('div', 'dshp-hint')
+
+      box.append(providerField, credField, customBox, row, statusText)
+      panes.appendChild(box)
+
+      // 回填当前配置——先把空表单挂上去，拉到数据再填，不用等接口回来才出现整页
+      fetch(BASE + '/config', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((cfg) => {
+          providerSel.value = cfg.walletProvider || 'deepseek'
+          credInput.value = cfg.walletCredentialKey || ''
+          const c = cfg.walletCustom || {}
+          urlInput.value = c.balanceUrl || ''
+          curInput.value = c.currency || ''
+          totalPathInput.value = c.totalBalancePath || ''
+          todayPathInput.value = c.todayUsagePath || ''
+          syncConfigVisibility()
+        })
+        .catch(() => {})
+
+      function collectConfig() {
+        return {
+          walletProvider: providerSel.value,
+          walletCredentialKey: credInput.value.trim(),
+          walletCustom: {
+            balanceUrl: urlInput.value.trim(),
+            currency: curInput.value.trim() || 'USD',
+            totalBalancePath: totalPathInput.value.trim(),
+            todayUsagePath: todayPathInput.value.trim(),
+          },
+        }
+      }
+
+      async function saveConfig(thenTest) {
+        saveBtn.disabled = true
+        testBtn.disabled = true
+        statusText.textContent = '保存中…'
+        try {
+          const res = await fetch(BASE + '/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(collectConfig()),
+          })
+          const j = await res.json()
+          if (!j.ok) throw new Error(j.error || '保存失败')
+          statusText.textContent = '已保存'
+          if (thenTest) {
+            statusText.textContent = '保存成功，正在测试连接…'
+            await hudFetch(true)
+            const bad = hud.data && hud.data.code
+            statusText.textContent = bad
+              ? '没连上：' + (hud.data.errText || hud.data.code)
+              : '连上了，右键看一下钱包，数字对不对'
+          }
+        } catch (err) {
+          statusText.textContent = '保存失败：' + String((err && err.message) || err).slice(0, 120)
+        } finally {
+          saveBtn.disabled = false
+          testBtn.disabled = false
+        }
+      }
+      saveBtn.addEventListener('click', () => saveConfig(false))
+      testBtn.addEventListener('click', () => saveConfig(true))
       return
     }
     // setting
