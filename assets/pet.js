@@ -4174,6 +4174,11 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     providerField.appendChild(providerSel)
 
     const { field: credField, input: credInput } = mkTextField('凭据名（留空用厂商默认）')
+    const credHint = $(
+      'div',
+      'dshp-hint',
+      '这里填的是凭据的「名字」，不是 API Key 本身——真正的密钥值要去 DSH「新增模型（自定义 API）」那边注册好，这里只填注册时用的那个名字（或者对应的环境变量名）。',
+    )
 
     // ———— 只有「自定义 API」才需要下面这些字段，整体一起显隐 ————
     const customBox = $('div')
@@ -4258,7 +4263,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     walletRow.append(saveBtn, testBtn)
     const statusText = $('div', 'dshp-hint')
 
-    box.append(providerField, credField, customBox, walletRow, statusText)
+    box.append(providerField, credField, credHint, customBox, walletRow, statusText)
 
     // 回填当前配置——先把空表单挂上去，拉到数据再填，不用等接口回来才出现整页
     fetch(BASE + '/config', { cache: 'no-store' })
@@ -4315,7 +4320,18 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       }
     }
 
+    // 「凭据名」填的应该是名字（比如 DEEPSEEK_API_KEY），不是密钥本身——
+    // 真见过有人直接把 sk-xxx 粘进来，报错「没配置 sk-xxx」看着莫名其妙。
+    // 这种形状（sk-/sess-/key- 开头 + 一长串字母数字）大概率是密钥不是名字，
+    // 保存前拦一下，别让人绕着这个坑反复试。
+    const looksLikeRawKey = (s) => /^(sk|sess|key|api)[-_][a-z0-9]{16,}$/i.test(s.trim())
     async function saveConfig(thenTest) {
+      const credVal = credInput.value.trim()
+      if (looksLikeRawKey(credVal)) {
+        statusText.textContent =
+          '「凭据名」这里应该填名字（比如 DEEPSEEK_API_KEY），不是密钥本身——你填的这串看着像真实密钥。去 DSH「新增模型（自定义 API）」把密钥注册成具名凭据，这里只填那个名字，或者设个同名环境变量。'
+        return
+      }
       saveBtn.disabled = true
       testBtn.disabled = true
       statusText.textContent = '保存中…'
