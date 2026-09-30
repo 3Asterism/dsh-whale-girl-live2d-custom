@@ -3589,22 +3589,15 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   }
 
   /**
-   * 一轮结束时弹出来（主人要的「本轮消耗都会在这弹出来」）——但安静模式下
-   * 不自动弹：安静模式本来就是「别自己往外冒流水账」，钱包面板每轮自己弹
-   * 出来跟这个精神矛盾，之前只做了气泡里不显示 token 数字，这个面板漏了。
-   * 数据照常在后台静默拉新（`hudFetch`），不自动弹只是不抢屏幕——手动右键
-   * 打开钱包时看到的还是最新的。
-   * 等 1.2 秒再弹：宿主的记账是收到事件后才落账的，太早拉会拿到上一轮的数。
+   * 一轮结束在后台把账刷新——不再自动弹出来了。之前「每轮结束都弹一下」
+   * 是主人自己要的，后来反馈这个面板「太大了占我半个屏幕」，改成只刷数据、
+   * 不自动开；要看余额还是右键叫「钱包」出来，看到的就是这里刷好的最新数。
+   * 等 1.2 秒再拉：宿主的记账是收到事件后才落账的，太早拉会拿到上一轮的数。
    */
   function hudPopTurnEnd() {
     const before = hud.seq
     setTimeout(async () => {
-      if (hud.open) {
-        await hudFetch(false)
-        return
-      }
       await hudFetch(false)
-      if (CFG.repeatChat) openHud({ autoHideMs: 9000 })
       // seq 没变说明账还没落，再补一次
       if (hud.seq === before) setTimeout(() => hudFetch(false), 1800)
     }, 1200)
@@ -4071,7 +4064,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       mouthBtn.textContent = CFG.talkMouth ? '说话口型：开' : '说话口型：关'
     })
     const chatBtn = $('button', 'dshp-btn', CFG.repeatChat ? '安静模式：关' : '安静模式：开')
-    chatBtn.title = '安静模式：开 = 气泡不照抄「你问了什么 / 她回了什么」，也不写过程流水账（工具路径、工具名、第 N 步、token 小结、分身提示）；她自己的台词、动作、表情、报错照常。（就是原来的「复述对话原文」开关，默认开）'
+    chatBtn.title = '安静模式：开 = 气泡不照抄「你问了什么 / 她回了什么」，也不写过程流水账（工具路径、工具名、第 N 步、分身提示）；她自己的台词、动作、表情、报错、结算那行「耗时 · N tokens」、钱包面板都照常。（就是原来的「复述对话原文」开关，默认开）'
     chatBtn.addEventListener('click', () => {
       CFG.repeatChat = !CFG.repeatChat
       chatBtn.textContent = CFG.repeatChat ? '安静模式：关' : '安静模式：开'
@@ -4446,8 +4439,11 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   /* 「复述对话原文」开关（默认关）在本机就是**安静模式**，管两件事：
    *   1. 对话原文——'user'（你的原话）与 'delta'/'assistant'（她的回复原文）；
    *   2. 过程流水账——工具目标路径、工具名脚注、「正在思考 · 第 N 步」、
-   *      「本轮 N tokens」、结算里的耗时/token 小结、分身提示。见 noteProcess()。
-   * 她自己的台词（SAY./TOOL_LINE）、表情、动作、报错文案、余额 HUD 不受影响。 */
+   *      分身提示。见 noteProcess()。
+   * 她自己的台词（SAY./TOOL_LINE）、表情、动作、报错文案、余额 HUD 不受影响；
+   * 结算那行「耗时 · N tokens」也不受影响——主人反馈这行占地方小、爱看，
+   * 跟「复述对话原文」那种大段文字不是一回事，单独在 turn-end 里直接拼，
+   * 不走 sayChat()/noteProcess() 这道安静模式的门。 */
   function sayChat(text, opts) {
     if (!CFG.repeatChat) return
     ui.bubble.show(text, opts)
@@ -4590,14 +4586,14 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         break
 
       case 'hud-turn': {
-        // 宿主已经把这一轮的账算好了，直接弹（比再去拉一次接口更快也更准）——
-        // 安静模式下只刷数据不自动弹，跟 hudPopTurnEnd() 是同一条道理。
+        // 宿主已经把这一轮的账算好了，先把数据刷新——主人反馈这个面板
+        // 「太大了占半个屏幕」，不想每轮自动弹，所以只刷数据不自动开。
+        // 要看就右键叫出来，看到的是这里已经刷好的最新数字。
         if (m.turn) {
           hud.turn = Object.assign({ ok: true }, m.turn)
           hud.seq = m.turn.seq || hud.seq
           if (!hud.data) hudFetch(false)
           else hudRender()
-          if (!hud.open && CFG.repeatChat) openHud({ autoHideMs: 9000, flash: true })
         }
         break
       }
@@ -4637,11 +4633,13 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
           act({
             mood: 'happy',
             props: [pickFresh(['stickerCat', 'stickerRabbit', 'flower', 'heartbeat'], 'celebrate')],
-            line: keepText ? null : pickFresh(SAY.done, 'done') + (CFG.repeatChat && stat.length ? '\n' + stat.join(' · ') : ''),
+            // 耗时 + token 数这行主人要求不跟安静模式走——占地方小，就爱看这个，
+            // 安静模式压的是「你问了什么/她回了什么」那种大段复述，不是这个。
+            line: keepText ? null : pickFresh(SAY.done, 'done') + (stat.length ? '\n' + stat.join(' · ') : ''),
             ms: 3000,
           })
           if (keepText) {
-            if (stat.length) noteProcess(stat.join(' · '))
+            if (stat.length) ui.bubble.note(stat.join(' · '))
             setTimeout(() => {
               if (agent.status !== 'idle') return
               ui.bubble.show(pickFresh(SAY.done, 'done'), { name: 'DS 鲸鱼娘', ttl: 4200 })
