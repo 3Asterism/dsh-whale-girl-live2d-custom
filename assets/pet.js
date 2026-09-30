@@ -3589,7 +3589,11 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   }
 
   /**
-   * 一轮结束时弹出来（主人要的「本轮消耗都会在这弹出来」）。
+   * 一轮结束时弹出来（主人要的「本轮消耗都会在这弹出来」）——但安静模式下
+   * 不自动弹：安静模式本来就是「别自己往外冒流水账」，钱包面板每轮自己弹
+   * 出来跟这个精神矛盾，之前只做了气泡里不显示 token 数字，这个面板漏了。
+   * 数据照常在后台静默拉新（`hudFetch`），不自动弹只是不抢屏幕——手动右键
+   * 打开钱包时看到的还是最新的。
    * 等 1.2 秒再弹：宿主的记账是收到事件后才落账的，太早拉会拿到上一轮的数。
    */
   function hudPopTurnEnd() {
@@ -3600,7 +3604,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         return
       }
       await hudFetch(false)
-      openHud({ autoHideMs: 9000 })
+      if (CFG.repeatChat) openHud({ autoHideMs: 9000 })
       // seq 没变说明账还没落，再补一次
       if (hud.seq === before) setTimeout(() => hudFetch(false), 1800)
     }, 1200)
@@ -4586,13 +4590,14 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         break
 
       case 'hud-turn': {
-        // 宿主已经把这一轮的账算好了，直接弹（比再去拉一次接口更快也更准）
+        // 宿主已经把这一轮的账算好了，直接弹（比再去拉一次接口更快也更准）——
+        // 安静模式下只刷数据不自动弹，跟 hudPopTurnEnd() 是同一条道理。
         if (m.turn) {
           hud.turn = Object.assign({ ok: true }, m.turn)
           hud.seq = m.turn.seq || hud.seq
           if (!hud.data) hudFetch(false)
           else hudRender()
-          if (!hud.open) openHud({ autoHideMs: 9000, flash: true })
+          if (!hud.open && CFG.repeatChat) openHud({ autoHideMs: 9000, flash: true })
         }
         break
       }
