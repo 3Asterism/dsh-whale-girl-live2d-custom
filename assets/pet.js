@@ -720,6 +720,9 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   padding:3px 9px;border-radius:7px;cursor:pointer}
 .dshp-tab-btn.dshp-active{opacity:1;background:rgba(124,92,255,.14);color:var(--dshp-accent);font-weight:600}
 .dshp-grid{display:flex;flex-wrap:wrap;gap:5px;max-height:210px;overflow:auto;overscroll-behavior:contain}
+/* 面板本身不限高，内容一多（比如「自定义 API」那一长串字段）会把整个面板
+   撑到屏幕外去。panes 这层限一下高度，超出的部分自己滚，不连累面板整体。 */
+.dshp-panes{max-height:calc(360px * var(--dshp-ps));overflow-y:auto;overscroll-behavior:contain}
 .dshp-chip{border:1px solid var(--dshp-line);background:transparent;color:inherit;font:inherit;
   font-size:calc(11.5px * var(--dshp-ps));border-radius:calc(8px * var(--dshp-ps));
   padding:calc(3px * var(--dshp-ps)) calc(9px * var(--dshp-ps));cursor:pointer;transition:background .12s}
@@ -2576,7 +2579,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
 
     const menu = $('div', 'dshp-panel dshp-menu')
     const tabs = $('div', 'dshp-tabs')
-    const panes = $('div')
+    const panes = $('div', 'dshp-panes')
     menu.append(tabs, panes)
     addCloseButton(menu)
 
@@ -3960,6 +3963,10 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       // 右键钱包读哪个厂商的余额，在这页配；API key 本身不经过这里——
       // 还是走 DSH 自己的「新增模型（自定义 API）」凭据管理，这里只填
       // 「用哪个凭据名去读」，跟 DSH 那边填的凭据名对上就行。
+      // 「自定义 API」这组字段的设计直接照抄 DSH 自己「新增模型（自定义
+      // API）」→「接口与字段（高级）」那个界面——那套已经踩过各家厂商接口
+      // 形状不一样的坑（有的只给「剩余」，有的只给「总量/已用」；有的连
+      // 余额接口都没有，只能靠真实 token 用量按自定义单价估）。
       const box = $('div')
       box.append(
         $(
@@ -3968,6 +3975,17 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
           '配右键钱包读哪家的余额。API key 本身不填在这——去 DSH「新增模型（自定义 API）」那边配好凭据，这里只填用哪个凭据名去读。',
         ),
       )
+
+      /** label+input 竖排的小 helper，减少重复代码。 */
+      function mkTextField(labelText, placeholder) {
+        const field = $('label', 'dshp-field')
+        field.append($('span', 'dshp-field-label', labelText))
+        const input = document.createElement('input')
+        input.type = 'text'
+        if (placeholder) input.placeholder = placeholder
+        field.appendChild(input)
+        return { field, input }
+      }
 
       const providerField = $('label', 'dshp-field')
       providerField.append($('span', 'dshp-field-label', '记账厂商'))
@@ -3984,51 +4002,83 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       }
       providerField.appendChild(providerSel)
 
-      const credField = $('label', 'dshp-field')
-      credField.append($('span', 'dshp-field-label', '凭据名（留空用厂商默认）'))
-      const credInput = document.createElement('input')
-      credInput.type = 'text'
-      credField.appendChild(credInput)
+      const { field: credField, input: credInput } = mkTextField('凭据名（留空用厂商默认）')
 
-      // 只有「自定义 API」才需要下面这几个字段，整体一起显隐
+      // ———— 只有「自定义 API」才需要下面这些字段，整体一起显隐 ————
       const customBox = $('div')
-      const urlField = $('label', 'dshp-field')
-      urlField.append($('span', 'dshp-field-label', '接口地址'))
-      const urlInput = document.createElement('input')
-      urlInput.type = 'text'
-      urlInput.placeholder = 'https://example.com/api/balance'
-      urlField.appendChild(urlInput)
 
-      const curField = $('label', 'dshp-field')
-      curField.append($('span', 'dshp-field-label', '币种'))
-      const curInput = document.createElement('input')
-      curInput.type = 'text'
-      curInput.placeholder = 'USD'
-      curField.appendChild(curInput)
+      const { field: urlField, input: urlInput } = mkTextField('余额接口', 'https://example.com/api/balance')
+      const { field: headerField, input: headerInput } = mkTextField('请求头（{key} 会替换成凭据值）', 'Bearer {key}')
+      const { field: curField, input: curInput } = mkTextField('币种', 'USD')
+      const { field: mulField, input: mulInput } = mkTextField('数值乘数（留空 = 1）', '例如 0.0001')
 
-      const totalPathField = $('label', 'dshp-field')
-      totalPathField.append($('span', 'dshp-field-label', '余额取值路径（点号分隔，比如 data.limit_remaining）'))
-      const totalPathInput = document.createElement('input')
-      totalPathInput.type = 'text'
-      totalPathInput.placeholder = 'data.limit_remaining'
-      totalPathField.appendChild(totalPathInput)
+      customBox.append(
+        urlField,
+        headerField,
+        curField,
+        mulField,
+        $(
+          'div',
+          'dshp-hint',
+          '余额取值二选一：接口直接给「剩余」就填下面第一个；只给「总量」和「已用」（没有剩余字段）就填后两个。',
+        ),
+      )
+      const { field: totalBalField, input: totalBalInput } = mkTextField('余额字段', '例如 data.limit_remaining')
+      const { field: totalField, input: totalInput } = mkTextField('总量字段', '例如 data.total_credits')
+      const { field: usedField, input: usedInput } = mkTextField('已用字段', '例如 data.total_usage')
+      const { field: limitField, input: limitInput } = mkTextField('额度上限字段（可选，配额环用）', '例如 data.limit')
+      customBox.append(totalBalField, totalField, usedField, limitField)
 
-      const todayPathField = $('label', 'dshp-field')
-      todayPathField.append($('span', 'dshp-field-label', '今日已用取值路径（留空则用余额差分估算）'))
-      const todayPathInput = document.createElement('input')
-      todayPathInput.type = 'text'
-      todayPathInput.placeholder = 'data.usage_daily'
-      todayPathField.appendChild(todayPathInput)
+      customBox.append($('div', 'dshp-hint', '用量接口可选：跟余额接口完全独立的第二个接口，专门查「今日已用」（比如 OpenAI 兼容中转站的 /v1/dashboard/billing/usage）。留空就退回余额差分估算。'))
+      const { field: usageUrlField, input: usageUrlInput } = mkTextField('用量接口（可选）', 'https://example.com/api/usage')
+      const { field: usagePathField, input: usagePathInput } = mkTextField('用量字段', '例如 total_usage')
+      const { field: usageMulField, input: usageMulInput } = mkTextField('用量乘数（留空 = 1）', '例如 0.01')
+      customBox.append(usageUrlField, usagePathField, usageMulField)
 
-      customBox.append(urlField, curField, totalPathField, todayPathField)
+      customBox.append(
+        $(
+          'div',
+          'dshp-hint',
+          '事件匹配：给完全没有余额/用量接口可查的厂商兜底（比如公司内部网关）。这一轮用的模型名命中下面任意一个关键字（逗号分隔），就改用真实 token 用量 × 下面这份自定义单价直接算钱。留空 = 不启用。',
+        ),
+      )
+      const { field: eventField, input: eventInput } = mkTextField('事件匹配关键字', '会话事件里的模型名关键字，逗号分隔')
+      const { field: hitField, input: hitInput } = mkTextField('缓存命中单价', '例：0.02')
+      const { field: missField, input: missInput } = mkTextField('未命中输入单价', '例：1.0')
+      const { field: outField, input: outInput } = mkTextField('输出单价', '例：4.0')
+      const priceCurField = $('label', 'dshp-field')
+      priceCurField.append($('span', 'dshp-field-label', '单价币种'))
+      const priceCurSel = document.createElement('select')
+      for (const [val, text] of [
+        ['CNY', '人民币（元 / CNY）'],
+        ['USD', '美元（$ / USD）'],
+      ]) {
+        const opt = document.createElement('option')
+        opt.value = val
+        opt.textContent = text
+        priceCurSel.appendChild(opt)
+      }
+      priceCurField.appendChild(priceCurSel)
+      const { field: rateField, input: rateInput } = mkTextField('汇率（仅单价币种选美元时需要）', '例如 7.1')
+      customBox.append(
+        eventField,
+        hitField,
+        missField,
+        outField,
+        priceCurField,
+        rateField,
+        $('div', 'dshp-hint', '单位是「币种 / 百万 token」，三个单价留空则沿用内置 DeepSeek 价目表。'),
+      )
 
       const CRED_DEFAULT = { deepseek: 'DEEPSEEK_API_KEY', openrouter: 'OPENROUTER_API_KEY', custom: '' }
       function syncConfigVisibility() {
         const isCustom = providerSel.value === 'custom'
         customBox.style.display = isCustom ? '' : 'none'
         credInput.placeholder = CRED_DEFAULT[providerSel.value] || '凭据名'
+        rateField.style.display = priceCurSel.value === 'USD' ? '' : 'none'
       }
       providerSel.addEventListener('change', syncConfigVisibility)
+      priceCurSel.addEventListener('change', syncConfigVisibility)
       syncConfigVisibility()
 
       const row = $('div', 'dshp-row')
@@ -4048,22 +4098,49 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
           credInput.value = cfg.walletCredentialKey || ''
           const c = cfg.walletCustom || {}
           urlInput.value = c.balanceUrl || ''
+          headerInput.value = c.authHeaderTemplate || ''
           curInput.value = c.currency || ''
-          totalPathInput.value = c.totalBalancePath || ''
-          todayPathInput.value = c.todayUsagePath || ''
+          mulInput.value = c.valueMultiplier != null ? String(c.valueMultiplier) : ''
+          totalBalInput.value = c.totalBalancePath || ''
+          totalInput.value = c.totalPath || ''
+          usedInput.value = c.usedPath || ''
+          limitInput.value = c.limitPath || ''
+          usageUrlInput.value = c.usageUrl || ''
+          usagePathInput.value = c.usagePath || ''
+          usageMulInput.value = c.usageMultiplier != null ? String(c.usageMultiplier) : ''
+          eventInput.value = c.eventMatchKeywords || ''
+          hitInput.value = c.priceHit != null ? String(c.priceHit) : ''
+          missInput.value = c.priceMiss != null ? String(c.priceMiss) : ''
+          outInput.value = c.priceOut != null ? String(c.priceOut) : ''
+          priceCurSel.value = c.priceCurrency || 'CNY'
+          rateInput.value = c.exchangeRate != null ? String(c.exchangeRate) : ''
           syncConfigVisibility()
         })
         .catch(() => {})
 
+      const numOrNull = (s) => (s.trim() === '' ? null : Number(s.trim()))
       function collectConfig() {
         return {
           walletProvider: providerSel.value,
           walletCredentialKey: credInput.value.trim(),
           walletCustom: {
             balanceUrl: urlInput.value.trim(),
+            authHeaderTemplate: headerInput.value.trim(),
             currency: curInput.value.trim() || 'USD',
-            totalBalancePath: totalPathInput.value.trim(),
-            todayUsagePath: todayPathInput.value.trim(),
+            valueMultiplier: numOrNull(mulInput.value) || 1,
+            totalBalancePath: totalBalInput.value.trim(),
+            totalPath: totalInput.value.trim(),
+            usedPath: usedInput.value.trim(),
+            limitPath: limitInput.value.trim(),
+            usageUrl: usageUrlInput.value.trim(),
+            usagePath: usagePathInput.value.trim(),
+            usageMultiplier: numOrNull(usageMulInput.value) || 1,
+            eventMatchKeywords: eventInput.value.trim(),
+            priceHit: numOrNull(hitInput.value),
+            priceMiss: numOrNull(missInput.value),
+            priceOut: numOrNull(outInput.value),
+            priceCurrency: priceCurSel.value,
+            exchangeRate: numOrNull(rateInput.value),
           },
         }
       }
