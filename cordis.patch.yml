@@ -5,11 +5,11 @@
 # Web profile 的配置树。
 #
 # 安装（从 GitHub / npm）：
-#   dsh plugin --profile web add github:Andersen216/dsh-whale-girl-live2d
+#   dsh plugin --profile web add github:3Asterism/dsh-whale-girl-live2d-custom
 # 安装（本地开发，link 到源码目录）：
-#   dsh plugin --profile web add "link:/绝对路径/dsh-whale-girl-live2d"
+#   dsh plugin --profile web add "link:/绝对路径/dsh-whale-girl-live2d-custom"
 # 卸载：
-#   dsh plugin --profile web remove dsh-whale-girl-live2d
+#   dsh plugin --profile web remove dsh-whale-girl-live2d-custom
 #
 # ⚠️ 下面 insert 的 `name:` 必须与安装后的**包名**完全一致，否则 DSH 找不到模块，
 #    表现为「装上了但桌宠不出现」。改包名时这里要一起改（踩过一次）。
@@ -17,4 +17,4 @@
 
 - insert:
     - id: dsh-live2d-pet
-      name: dsh-whale-girl-live2d
+      name: dsh-whale-girl-live2d-custom

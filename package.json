@@ -1,7 +1,7 @@
 {
-  "name": "dsh-whale-girl-live2d",
-  "version": "0.4.4",
-  "description": "鲸鱼娘桌宠：把 Live2D 鲸鱼娘挂进 DSH Web 界面的桌宠插件——模型常驻桌面，跟着 agent 的真实状态换表情与动作，点一下就能直接跟 agent 说话，右键菜单可换表情 / 换装 / 摆场景 / 演小动作。（Whale Girl Pet: a Live2D companion for the DeepSeek Harness Web UI. Model assets are non-commercial, CC BY-NC-SA 4.0.）",
+  "name": "dsh-whale-girl-live2d-custom",
+  "version": "0.5.0",
+  "description": "鲸鱼娘桌宠（二次开发版，基于 Andersen216/dsh-whale-girl-live2d）：把 Live2D 鲸鱼娘挂进 DSH Web 界面的桌宠插件——模型常驻桌面，跟着 agent 的真实状态换表情与动作，点一下就能直接跟 agent 说话，右键菜单可换表情 / 换装 / 摆场景 / 演小动作。（Whale Girl Pet, a customized fork of Andersen216/dsh-whale-girl-live2d. Model assets are non-commercial, CC BY-NC-SA 4.0.）",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -75,12 +75,12 @@
       "role": "Live2D 模型制作（绑定/动作/表情）"
     }
   ],
-  "homepage": "https://github.com/Andersen216/dsh-whale-girl-live2d",
+  "homepage": "https://github.com/3Asterism/dsh-whale-girl-live2d-custom",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Andersen216/dsh-whale-girl-live2d.git"
+    "url": "git+https://github.com/3Asterism/dsh-whale-girl-live2d-custom.git"
   },
   "bugs": {
-    "url": "https://github.com/Andersen216/dsh-whale-girl-live2d/issues"
+    "url": "https://github.com/3Asterism/dsh-whale-girl-live2d-custom/issues"
   }
 }

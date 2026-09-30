@@ -1,5 +1,49 @@
 # 更新日志 / Changelog
 
+## 0.5.0 — 2026-10-01
+
+> 本包（`dsh-whale-girl-live2d-custom`）是 [Andersen216/dsh-whale-girl-live2d](https://github.com/Andersen216/dsh-whale-girl-live2d)
+> 的二次开发版本，见 README「这是什么仓库」一节。
+
+> **English summary**: this package (`dsh-whale-girl-live2d-custom`) is a customized fork of
+> [Andersen216/dsh-whale-girl-live2d](https://github.com/Andersen216/dsh-whale-girl-live2d) — see the
+> "About this repo" section in the README.
+
+### 修：桌面版（Electron 官方壳）不显示鲸鱼娘
+
+官方桌面版加载的 index 页面来自安装包静态 dist，插件原来只通过 `tapIndex()` 注入脚本——
+这条路径只在浏览器版有效，桌面版永远到达不了。改用 `webserver/index-inject` 通道推送内联
+脚本，两条通道并存，浏览器版不受影响。（已提交原仓库 [PR #2](https://github.com/Andersen216/dsh-whale-girl-live2d/pull/2)）
+
+### 性能：隐藏时停渲染 / 减少每帧分配 / 缓存布局读取
+
+- 主动收起桌宠时停掉 PIXI 渲染循环，不再空转
+- `applyRig()` 每帧复用 Map/Set，不再每帧分配再丢弃
+- `gazeTick()` 缓存 `getBoundingClientRect()`，只在真的会动/会变的地方标脏
+
+（已提交原仓库 [PR #3](https://github.com/Andersen216/dsh-whale-girl-live2d/pull/3)）
+
+### 新增：真正的四角贴边吸附
+
+- 贴左上/左下/右上/右下四个角能整个锁死，工具条自动挪到没有墙挡着的那一侧、竖排
+- 贴边判断和贴死位置改成扣掉透明留白算（模型画布比可见画面大一圈），不再是「看起来贴不到底」
+- 命中掩码强制现测一帧，避免用她做着别的动作时测出来的旧数据
+- 气泡 / 设置面板 / 钱包卡片贴顶角落时会自动翻到脚下，不会顶出窗口
+
+（已提交原仓库 [PR #4](https://github.com/Andersen216/dsh-whale-girl-live2d/pull/4)）
+
+### 新增：安静模式（默认开）＋ 扩充台词池 —— 仅本仓库
+
+- 「安静模式」默认开启：气泡不复述对话原文（你问了什么/她回了什么），不写过程流水账
+  （工具路径、思考步数、token 小结、分身提示），钱包卡片也不显示 token 消耗数字；
+  她自己的台词、表情、动作、报错文案、余额不受影响
+- 扩充「大肥鱼」等 DeepSeek/鲸鱼娘相关梗的台词池，取材中文互联网
+
+### 改：工具栏四个按钮换成 Lucide 线性图标
+
+说话 / 菜单 / 收起 / 打开 DSH 四个按钮，原来是 emoji + 纯字符拼的『图标』，
+换成 [Lucide](https://lucide.dev)（ISC 协议）的线性 SVG 图标。
+
 ## 0.4.4 — 2026-09-30
 
 > **English summary**: mouse-move stutter on macOS is fixed. Two causes, both in the shell:
