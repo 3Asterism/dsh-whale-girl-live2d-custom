@@ -774,6 +774,19 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   font-weight:850;font-size:calc(11px * var(--dshp-ps));white-space:nowrap}
 .dshp-hud-tag.dshp-peak{background:rgba(232,45,74,.15);color:#d81e3f;border:1px solid rgba(216,30,63,.38)}
 .dshp-hud-tag.dshp-valley{background:rgba(16,185,129,.16);color:#0a8f63;border:1px solid rgba(10,143,99,.38)}
+.dshp-hud-head-right{display:flex;align-items:center;gap:calc(7px * var(--dshp-ps))}
+/* 配额环形指示器：只有厂商给得出「限额」才显示（比如 OpenRouter 的
+   limit），DeepSeek 那种按量计费、没有额度上限概念的厂商不显示。
+   纯 CSS conic-gradient 画环，不用额外画 SVG；--pct 是百分比数字（0-100），
+   JS 那边用 style.setProperty 写进来。 */
+.dshp-hud-quota{position:relative;width:calc(26px * var(--dshp-ps));height:calc(26px * var(--dshp-ps));flex:none}
+.dshp-hud-quota-ring{width:100%;height:100%;border-radius:50%;
+  background:conic-gradient(var(--dshp-quota-color,var(--dshp-accent)) calc(var(--pct,0) * 1%),
+    var(--dshp-line) 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px))}
+.dshp-hud-quota-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:calc(7.5px * var(--dshp-ps));font-weight:800;font-variant-numeric:tabular-nums}
 .dshp-hud-foot{opacity:.45;font-size:calc(10px * var(--dshp-ps));line-height:1.55;
   margin-top:calc(7px * var(--dshp-ps));white-space:pre-wrap}
 @media (prefers-color-scheme:dark){
@@ -2574,7 +2587,19 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     const hudHead = $('div', 'dshp-hud-head')
     const hudTitle = $('span', null, '鲸鱼娘 · 钱包')
     const hudDot = $('span', 'dshp-hud-tag dshp-valley', '谷')
-    hudHead.append(hudTitle, hudDot)
+    // 配额环形指示器：只有厂商给得出「限额」的时候才显示（比如 OpenRouter
+    // 的 limit），DeepSeek 官方那种按量计费、没有「额度上限」概念的厂商，
+    // hudRender() 里会把它整个藏起来，不是每次都占地方。
+    const hudQuota = $('div', 'dshp-hud-quota')
+    const hudQuotaRing = $('div', 'dshp-hud-quota-ring')
+    const hudQuotaText = $('span', 'dshp-hud-quota-text', '')
+    hudQuota.append(hudQuotaRing, hudQuotaText)
+    hudQuota.style.display = 'none'
+    // badge（峰/谷）和配额环放一个子容器里，让它们靠在一起贴右边，
+    // 标题单独占左边——不然 hudHead 的 space-between 会把三个都拉开
+    const hudHeadRight = $('div', 'dshp-hud-head-right')
+    hudHeadRight.append(hudDot, hudQuota)
+    hudHead.append(hudTitle, hudHeadRight)
     const hudMoney = $('div', 'dshp-hud-money')
     const hudMoneyNum = $('b', null, '—')
     const hudMoneyCur = $('span', null, 'CNY')
@@ -2617,6 +2642,9 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         countdown: hudCdV,
         foot: hudFoot,
         title: hudTitle,
+        quotaWrap: hudQuota,
+        quotaRing: hudQuotaRing,
+        quotaText: hudQuotaText,
       },
       dock,
     }
@@ -3344,6 +3372,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     tick: null, // 倒计时定时器
     hideAt: 0, // 自动弹出后多久自己收（鼠标悬停时暂停）
     hideTimer: null,
+    stats: null, // { days, turns, tokens } —— 陪伴天数/累计轮次/累计 token，纯展示
   }
 
   const money = (v, cur) => {
@@ -3368,6 +3397,27 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     const peak = d.isPeak === true
     h.badge.textContent = d.isPeak === undefined || d.isPeak === null ? '—' : peak ? '峰' : '谷'
     h.badge.className = 'dshp-hud-tag ' + (peak ? 'dshp-peak' : 'dshp-valley')
+
+    // 配额环：只有厂商给得出「额度上限」才显示（比如 OpenRouter 的 limit），
+    // 没有这个概念的厂商（DeepSeek 按量计费）直接藏起来，不占地方。
+    if (h.quotaWrap) {
+      const limit = d.limit
+      if (typeof limit === 'number' && limit > 0 && typeof d.totalBalance === 'number') {
+        const usedPct = clamp(((limit - d.totalBalance) / limit) * 100, 0, 100)
+        h.quotaWrap.style.display = ''
+        h.quotaRing.style.setProperty('--pct', usedPct.toFixed(1))
+        // 绿→橙→红：快用完了要显眼，不是一直用accent色糊弄过去
+        h.quotaRing.style.setProperty(
+          '--dshp-quota-color',
+          usedPct >= 90 ? '#e8354a' : usedPct >= 70 ? '#e2a53a' : 'var(--dshp-accent)',
+        )
+        h.quotaText.textContent = Math.round(usedPct) + '%'
+        h.quotaWrap.title = `这个 key 的额度用了 ${usedPct.toFixed(1)}%（剩 ${money(d.totalBalance, d.currency)} / 上限 ${money(limit, d.currency)}）`
+      } else {
+        h.quotaWrap.style.display = 'none'
+      }
+    }
+
     if (d.code === 'NO_KEY') {
       // 注意：这里判的是 d.code，不是 d.ok——hudFetch() 把自家宿主的响应
       // 摊平进 hud.data 时，ok 恒为 true（错误信息单独塞进 code/errText），
@@ -3438,6 +3488,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         todayUsage: self.today ? self.today.amount : undefined,
         todayUsageCurrency: (self.balance && self.balance.currency) || 'CNY',
         provider: self.balance && self.balance.provider,
+        limit: self.balance && self.balance.ok ? self.balance.limit : undefined,
       }
       if (self.balance && self.balance.ok === false) {
         hud.data.code = self.balance.code
@@ -3449,6 +3500,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         hud.turn = { ok: true, seq: self.turn.seq, turn: self.turn.turn, amount: self.turn.amount, tokens: self.turn.tokens, ts: self.turn.ts }
         hud.seq = self.turn.seq || 0
       }
+      if (self.stats) hud.stats = self.stats
       hud.fetchedAt = Date.now()
       hudRender()
       return { self }
@@ -4197,7 +4249,24 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       row3.append(toBall, quitApp)
       box.append(row3, $('div', 'dshp-hint', '「收起」= 缩成贴边的悬浮小球；「关闭」= 真正退出这个桌面 App。'))
     }
+    // 陪伴天数 / 累计轮次 / 累计 token——纯展示的一句话，不做等级/成就那套
+    // （参考过 AgentPet 那类项目的游戏化系统，复杂度跟这个插件「轻量本地
+    // 插件」的定位不匹配，只留这一句就够了）。
+    const statsHint = $('div', 'dshp-hint', '')
+    function renderStatsHint() {
+      const s = hud.stats
+      if (!s || !s.days) {
+        statsHint.textContent = ''
+        return
+      }
+      const tokenTxt = s.tokens >= 10000 ? (s.tokens / 10000).toFixed(1) + ' 万' : String(s.tokens)
+      statsHint.textContent = `🐋 陪你写代码第 ${s.days} 天，一起跑了 ${s.turns} 轮，吃了 ${tokenTxt} token`
+    }
+    renderStatsHint()
+    if (!hud.stats) hudFetch(false).then(renderStatsHint).catch(() => {})
+
     box.append(
+      statsHint,
       row1,
       row2,
       $(
@@ -4227,6 +4296,11 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     lastText: '',
     tokens: 0,
   }
+
+  /** 有几个「分身」（非主会话）正在同时干活——超过 1 个反应不一样，
+   *  参考 clawd-on-desk「1 个/2 个以上」区分对待的做法。用 sessionId 去重，
+   *  免得同一个分身连续几条 turn-start 之外的事件把计数推高。 */
+  const activeSubagents = new Set()
 
   function connectSSE() {
     let es = null
@@ -4486,9 +4560,26 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         break
       }
 
-      case 'subagent':
-        if (m.active && ui.bubble.visible) noteProcess('分身也在干活…')
+      case 'subagent': {
+        const before = activeSubagents.size
+        if (m.active && m.sessionId) activeSubagents.add(m.sessionId)
+        else if (m.sessionId) activeSubagents.delete(m.sessionId)
+        const now = activeSubagents.size
+        if (now === before) {
+          // 数量没变，只是同一批分身又发了句别的——文案跟着当前数量走就行
+          if (m.active && ui.bubble.visible) noteProcess(now > 1 ? `${now} 个分身一起在干活…` : '分身也在干活…')
+          break
+        }
+        if (now > before && ui.bubble.visible) {
+          if (now === 1) noteProcess('分身也在干活…')
+          else {
+            // 一下子两个以上：比刚才更热闹，弹一下提醒「这次不是一个人在干」
+            qBounce(0.6)
+            noteProcess(`${now} 个分身一起在干活，忙死啦`)
+          }
+        }
         break
+      }
 
       case 'approval':
         if (m.state === 'asked') {
