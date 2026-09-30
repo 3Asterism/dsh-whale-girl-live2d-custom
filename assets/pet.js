@@ -661,10 +661,17 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   border-radius:calc(11px * var(--dshp-ds));flex:0 0 auto;white-space:nowrap;
   padding:calc(5px * var(--dshp-ds)) calc(11px * var(--dshp-ds));
   font-size:calc(13px * var(--dshp-ds));cursor:pointer;line-height:1.5;
+  display:inline-flex;align-items:center;justify-content:center;gap:calc(5px * var(--dshp-ds));
   box-shadow:0 3px 10px rgba(10,14,30,.14);transition:transform .12s ease}
-/* 纯符号按钮（打开 DSH / 收起）：正方形一点，只放一个符号 */
-.dshp-btn.dshp-icon{padding:calc(5px * var(--dshp-ds)) calc(9px * var(--dshp-ds));
+/* 纯符号按钮（打开 DSH / 收起 / 菜单）：正方形一点，只放一个图标 */
+.dshp-btn.dshp-icon{padding:calc(6px * var(--dshp-ds)) calc(8px * var(--dshp-ds));
   font-size:calc(15px * var(--dshp-ds));line-height:1.2}
+/* 工具栏图标：Lucide（ISC 协议，https://lucide.dev）的线性图标，内联 SVG，
+   别再用 emoji / 纯字符拼的「图标」——不同字体、系统下粗细和对齐都不一致，
+   看着比较糙。stroke 用 currentColor，跟着按钮文字颜色走，深浅色模式不用另配。 */
+.dshp-icon-svg{display:inline-flex;flex:none;line-height:0}
+.dshp-icon-svg svg{width:calc(14px * var(--dshp-ds));height:calc(14px * var(--dshp-ds));display:block}
+.dshp-btn.dshp-icon .dshp-icon-svg svg{width:calc(16px * var(--dshp-ds));height:calc(16px * var(--dshp-ds))}
 /* 大小加减键 */
 .dshp-btn.dshp-step{min-width:calc(30px * var(--dshp-ds));text-align:center;
   font-size:calc(17px * var(--dshp-ds));font-weight:600;line-height:1.1}
@@ -782,6 +789,24 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     if (cls) el.className = cls
     if (text != null) el.textContent = text
     return el
+  }
+  /**
+   * 工具栏图标，取自 Lucide（ISC 协议，https://lucide.dev，Feather Icons 的后继）——
+   * 只挑了用到的四个，把 path/circle 内联成字符串，不引入整个图标库。
+   * viewBox 统一 0 0 24 24，跟原版一致，方便以后要加新图标就直接照抄。
+   */
+  const ICONS = {
+    chat: '<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/>',
+    more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    collapse: '<path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/>',
+    external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  }
+  function icon(name) {
+    const wrap = $('span', 'dshp-icon-svg')
+    wrap.innerHTML =
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ` +
+      `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`
+    return wrap
   }
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -2505,12 +2530,16 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     bubbleEl.append(head, body, foot)
 
     const dock = $('div', 'dshp-dock')
-    const talkBtn = $('button', 'dshp-btn dshp-primary', '💬 说话')
-    const menuBtn = $('button', 'dshp-btn', '⋯')
-    const hideBtn = $('button', 'dshp-btn', '–')
+    const talkBtn = $('button', 'dshp-btn dshp-primary')
+    talkBtn.append(icon('chat'), $('span', null, '说话'))
+    const menuBtn = $('button', 'dshp-btn dshp-icon')
+    menuBtn.append(icon('more'))
+    menuBtn.title = '菜单（表情 / 装饰 / 场景 / 动作 / 设置）'
+    const hideBtn = $('button', 'dshp-btn dshp-icon')
+    hideBtn.append(icon('collapse'))
     hideBtn.title = '收起（桌面版会缩成贴边小球）'
-    // 主人要的：一键打开 DeepSeek Harness，纯符号不写字
-    const openBtn = $('button', 'dshp-btn dshp-icon', '↗')
+    const openBtn = $('button', 'dshp-btn dshp-icon')
+    openBtn.append(icon('external'))
     openBtn.title = '打开 DeepSeek Harness 界面'
     dock.append(talkBtn, menuBtn, hideBtn, openBtn)
 
