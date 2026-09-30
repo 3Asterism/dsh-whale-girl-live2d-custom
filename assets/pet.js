@@ -706,6 +706,12 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   padding:calc(7px * var(--dshp-ps)) calc(9px * var(--dshp-ps));outline:none}
 .dshp-panel textarea{resize:none;height:calc(64px * var(--dshp-ps))}
 .dshp-panel textarea:focus,.dshp-field input[type=text]:focus,.dshp-field select:focus{border-color:var(--dshp-accent)}
+/* select 关着的时候吃得到上面那条规则（透明背景透出面板自己的深色底），
+   但下拉展开的选项列表是浏览器原生渲染的一层，大多数引擎不认
+   background:transparent，默认给的是不透明白底——这时候 color:inherit
+   带过去的还是给深色底配的浅色字，白底浅字基本看不清。选项这里直接给
+   一套固定的、肯定读得出来的配色，不跟着深浅色主题变量走。 */
+.dshp-field select option{color:#132043;background:#fff}
 /* 标签 + 输入框竖排：面板就 ~270-320px 宽，标签和输入框并排会挤，
    竖排在小尺寸下也不会截断，宽度富余的时候看着也不空。 */
 .dshp-field{display:block;margin-top:calc(8px * var(--dshp-ps))}
@@ -3804,7 +3810,6 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
       ['scene', '场景'],
       ['action', '动作'],
       ['setting', '设置'],
-      ['config', '配置'],
     ]
     u.menu.focused = 'face'
     for (const [id, label] of TABS) {
@@ -3957,224 +3962,6 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
         grid,
         $('div', 'dshp-hint', '动作是**一次性的**：演一遍就自己消失，不会一直挂着。\n（要一直留着的，去「装饰」和「场景」两页——蛋包饭也在这页，挤完酱就没了。）'),
       )
-      return
-    }
-    if (id === 'config') {
-      // 右键钱包读哪个厂商的余额，在这页配；API key 本身不经过这里——
-      // 还是走 DSH 自己的「新增模型（自定义 API）」凭据管理，这里只填
-      // 「用哪个凭据名去读」，跟 DSH 那边填的凭据名对上就行。
-      // 「自定义 API」这组字段的设计直接照抄 DSH 自己「新增模型（自定义
-      // API）」→「接口与字段（高级）」那个界面——那套已经踩过各家厂商接口
-      // 形状不一样的坑（有的只给「剩余」，有的只给「总量/已用」；有的连
-      // 余额接口都没有，只能靠真实 token 用量按自定义单价估）。
-      const box = $('div')
-      box.append(
-        $(
-          'div',
-          'dshp-hint',
-          '配右键钱包读哪家的余额。API key 本身不填在这——去 DSH「新增模型（自定义 API）」那边配好凭据，这里只填用哪个凭据名去读。',
-        ),
-      )
-
-      /** label+input 竖排的小 helper，减少重复代码。 */
-      function mkTextField(labelText, placeholder) {
-        const field = $('label', 'dshp-field')
-        field.append($('span', 'dshp-field-label', labelText))
-        const input = document.createElement('input')
-        input.type = 'text'
-        if (placeholder) input.placeholder = placeholder
-        field.appendChild(input)
-        return { field, input }
-      }
-
-      const providerField = $('label', 'dshp-field')
-      providerField.append($('span', 'dshp-field-label', '记账厂商'))
-      const providerSel = document.createElement('select')
-      for (const [val, text] of [
-        ['deepseek', 'DeepSeek 官方'],
-        ['openrouter', 'OpenRouter'],
-        ['custom', '自定义 API'],
-      ]) {
-        const opt = document.createElement('option')
-        opt.value = val
-        opt.textContent = text
-        providerSel.appendChild(opt)
-      }
-      providerField.appendChild(providerSel)
-
-      const { field: credField, input: credInput } = mkTextField('凭据名（留空用厂商默认）')
-
-      // ———— 只有「自定义 API」才需要下面这些字段，整体一起显隐 ————
-      const customBox = $('div')
-
-      const { field: urlField, input: urlInput } = mkTextField('余额接口', 'https://example.com/api/balance')
-      const { field: headerField, input: headerInput } = mkTextField('请求头（{key} 会替换成凭据值）', 'Bearer {key}')
-      const { field: curField, input: curInput } = mkTextField('币种', 'USD')
-      const { field: mulField, input: mulInput } = mkTextField('数值乘数（留空 = 1）', '例如 0.0001')
-
-      customBox.append(
-        urlField,
-        headerField,
-        curField,
-        mulField,
-        $(
-          'div',
-          'dshp-hint',
-          '余额取值二选一：接口直接给「剩余」就填下面第一个；只给「总量」和「已用」（没有剩余字段）就填后两个。',
-        ),
-      )
-      const { field: totalBalField, input: totalBalInput } = mkTextField('余额字段', '例如 data.limit_remaining')
-      const { field: totalField, input: totalInput } = mkTextField('总量字段', '例如 data.total_credits')
-      const { field: usedField, input: usedInput } = mkTextField('已用字段', '例如 data.total_usage')
-      const { field: limitField, input: limitInput } = mkTextField('额度上限字段（可选，配额环用）', '例如 data.limit')
-      customBox.append(totalBalField, totalField, usedField, limitField)
-
-      customBox.append($('div', 'dshp-hint', '用量接口可选：跟余额接口完全独立的第二个接口，专门查「今日已用」（比如 OpenAI 兼容中转站的 /v1/dashboard/billing/usage）。留空就退回余额差分估算。'))
-      const { field: usageUrlField, input: usageUrlInput } = mkTextField('用量接口（可选）', 'https://example.com/api/usage')
-      const { field: usagePathField, input: usagePathInput } = mkTextField('用量字段', '例如 total_usage')
-      const { field: usageMulField, input: usageMulInput } = mkTextField('用量乘数（留空 = 1）', '例如 0.01')
-      customBox.append(usageUrlField, usagePathField, usageMulField)
-
-      customBox.append(
-        $(
-          'div',
-          'dshp-hint',
-          '事件匹配：给完全没有余额/用量接口可查的厂商兜底（比如公司内部网关）。这一轮用的模型名命中下面任意一个关键字（逗号分隔），就改用真实 token 用量 × 下面这份自定义单价直接算钱。留空 = 不启用。',
-        ),
-      )
-      const { field: eventField, input: eventInput } = mkTextField('事件匹配关键字', '会话事件里的模型名关键字，逗号分隔')
-      const { field: hitField, input: hitInput } = mkTextField('缓存命中单价', '例：0.02')
-      const { field: missField, input: missInput } = mkTextField('未命中输入单价', '例：1.0')
-      const { field: outField, input: outInput } = mkTextField('输出单价', '例：4.0')
-      const priceCurField = $('label', 'dshp-field')
-      priceCurField.append($('span', 'dshp-field-label', '单价币种'))
-      const priceCurSel = document.createElement('select')
-      for (const [val, text] of [
-        ['CNY', '人民币（元 / CNY）'],
-        ['USD', '美元（$ / USD）'],
-      ]) {
-        const opt = document.createElement('option')
-        opt.value = val
-        opt.textContent = text
-        priceCurSel.appendChild(opt)
-      }
-      priceCurField.appendChild(priceCurSel)
-      const { field: rateField, input: rateInput } = mkTextField('汇率（仅单价币种选美元时需要）', '例如 7.1')
-      customBox.append(
-        eventField,
-        hitField,
-        missField,
-        outField,
-        priceCurField,
-        rateField,
-        $('div', 'dshp-hint', '单位是「币种 / 百万 token」，三个单价留空则沿用内置 DeepSeek 价目表。'),
-      )
-
-      const CRED_DEFAULT = { deepseek: 'DEEPSEEK_API_KEY', openrouter: 'OPENROUTER_API_KEY', custom: '' }
-      function syncConfigVisibility() {
-        const isCustom = providerSel.value === 'custom'
-        customBox.style.display = isCustom ? '' : 'none'
-        credInput.placeholder = CRED_DEFAULT[providerSel.value] || '凭据名'
-        rateField.style.display = priceCurSel.value === 'USD' ? '' : 'none'
-      }
-      providerSel.addEventListener('change', syncConfigVisibility)
-      priceCurSel.addEventListener('change', syncConfigVisibility)
-      syncConfigVisibility()
-
-      const row = $('div', 'dshp-row')
-      const saveBtn = $('button', 'dshp-btn dshp-primary', '保存')
-      const testBtn = $('button', 'dshp-btn', '保存并测试连接')
-      row.append(saveBtn, testBtn)
-      const statusText = $('div', 'dshp-hint')
-
-      box.append(providerField, credField, customBox, row, statusText)
-      panes.appendChild(box)
-
-      // 回填当前配置——先把空表单挂上去，拉到数据再填，不用等接口回来才出现整页
-      fetch(BASE + '/config', { cache: 'no-store' })
-        .then((r) => r.json())
-        .then((cfg) => {
-          providerSel.value = cfg.walletProvider || 'deepseek'
-          credInput.value = cfg.walletCredentialKey || ''
-          const c = cfg.walletCustom || {}
-          urlInput.value = c.balanceUrl || ''
-          headerInput.value = c.authHeaderTemplate || ''
-          curInput.value = c.currency || ''
-          mulInput.value = c.valueMultiplier != null ? String(c.valueMultiplier) : ''
-          totalBalInput.value = c.totalBalancePath || ''
-          totalInput.value = c.totalPath || ''
-          usedInput.value = c.usedPath || ''
-          limitInput.value = c.limitPath || ''
-          usageUrlInput.value = c.usageUrl || ''
-          usagePathInput.value = c.usagePath || ''
-          usageMulInput.value = c.usageMultiplier != null ? String(c.usageMultiplier) : ''
-          eventInput.value = c.eventMatchKeywords || ''
-          hitInput.value = c.priceHit != null ? String(c.priceHit) : ''
-          missInput.value = c.priceMiss != null ? String(c.priceMiss) : ''
-          outInput.value = c.priceOut != null ? String(c.priceOut) : ''
-          priceCurSel.value = c.priceCurrency || 'CNY'
-          rateInput.value = c.exchangeRate != null ? String(c.exchangeRate) : ''
-          syncConfigVisibility()
-        })
-        .catch(() => {})
-
-      const numOrNull = (s) => (s.trim() === '' ? null : Number(s.trim()))
-      function collectConfig() {
-        return {
-          walletProvider: providerSel.value,
-          walletCredentialKey: credInput.value.trim(),
-          walletCustom: {
-            balanceUrl: urlInput.value.trim(),
-            authHeaderTemplate: headerInput.value.trim(),
-            currency: curInput.value.trim() || 'USD',
-            valueMultiplier: numOrNull(mulInput.value) || 1,
-            totalBalancePath: totalBalInput.value.trim(),
-            totalPath: totalInput.value.trim(),
-            usedPath: usedInput.value.trim(),
-            limitPath: limitInput.value.trim(),
-            usageUrl: usageUrlInput.value.trim(),
-            usagePath: usagePathInput.value.trim(),
-            usageMultiplier: numOrNull(usageMulInput.value) || 1,
-            eventMatchKeywords: eventInput.value.trim(),
-            priceHit: numOrNull(hitInput.value),
-            priceMiss: numOrNull(missInput.value),
-            priceOut: numOrNull(outInput.value),
-            priceCurrency: priceCurSel.value,
-            exchangeRate: numOrNull(rateInput.value),
-          },
-        }
-      }
-
-      async function saveConfig(thenTest) {
-        saveBtn.disabled = true
-        testBtn.disabled = true
-        statusText.textContent = '保存中…'
-        try {
-          const res = await fetch(BASE + '/config', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(collectConfig()),
-          })
-          const j = await res.json()
-          if (!j.ok) throw new Error(j.error || '保存失败')
-          statusText.textContent = '已保存'
-          if (thenTest) {
-            statusText.textContent = '保存成功，正在测试连接…'
-            await hudFetch(true)
-            const bad = hud.data && hud.data.code
-            statusText.textContent = bad
-              ? '没连上：' + (hud.data.errText || hud.data.code)
-              : '连上了，右键看一下钱包，数字对不对'
-          }
-        } catch (err) {
-          statusText.textContent = '保存失败：' + String((err && err.message) || err).slice(0, 120)
-        } finally {
-          saveBtn.disabled = false
-          testBtn.disabled = false
-        }
-      }
-      saveBtn.addEventListener('click', () => saveConfig(false))
-      testBtn.addEventListener('click', () => saveConfig(true))
       return
     }
     // setting
@@ -4341,6 +4128,223 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
     }
     renderStatsHint()
     if (!hud.stats) hudFetch(false).then(renderStatsHint).catch(() => {})
+
+    // ———— 记账厂商配置——原来单独占一个「配置」标签页，内容不算多，
+    // 没必要多占一页，合并到设置末尾。
+    // 右键钱包读哪个厂商的余额，在这配；API key 本身不经过这里——
+    // 还是走 DSH 自己的「新增模型（自定义 API）」凭据管理，这里只填
+    // 「用哪个凭据名去读」，跟 DSH 那边填的凭据名对上就行。
+    // 「自定义 API」这组字段的设计直接照抄 DSH 自己「新增模型（自定义
+    // API）」→「接口与字段（高级）」那个界面——那套已经踩过各家厂商接口
+    // 形状不一样的坑（有的只给「剩余」，有的只给「总量/已用」；有的连
+    // 余额接口都没有，只能靠真实 token 用量按自定义单价估）。
+    box.append($('div', 'dshp-hint', '—— 💰 记账 / 钱包配置 ——'))
+    box.append(
+      $(
+        'div',
+        'dshp-hint',
+        '配右键钱包读哪家的余额。API key 本身不填在这——去 DSH「新增模型（自定义 API）」那边配好凭据，这里只填用哪个凭据名去读。',
+      ),
+    )
+
+    /** label+input 竖排的小 helper，减少重复代码。 */
+    function mkTextField(labelText, placeholder) {
+      const field = $('label', 'dshp-field')
+      field.append($('span', 'dshp-field-label', labelText))
+      const input = document.createElement('input')
+      input.type = 'text'
+      if (placeholder) input.placeholder = placeholder
+      field.appendChild(input)
+      return { field, input }
+    }
+
+    const providerField = $('label', 'dshp-field')
+    providerField.append($('span', 'dshp-field-label', '记账厂商'))
+    const providerSel = document.createElement('select')
+    for (const [val, text] of [
+      ['deepseek', 'DeepSeek 官方'],
+      ['openrouter', 'OpenRouter'],
+      ['custom', '自定义 API'],
+    ]) {
+      const opt = document.createElement('option')
+      opt.value = val
+      opt.textContent = text
+      providerSel.appendChild(opt)
+    }
+    providerField.appendChild(providerSel)
+
+    const { field: credField, input: credInput } = mkTextField('凭据名（留空用厂商默认）')
+
+    // ———— 只有「自定义 API」才需要下面这些字段，整体一起显隐 ————
+    const customBox = $('div')
+
+    const { field: urlField, input: urlInput } = mkTextField('余额接口', 'https://example.com/api/balance')
+    const { field: headerField, input: headerInput } = mkTextField('请求头（{key} 会替换成凭据值）', 'Bearer {key}')
+    const { field: curField, input: curInput } = mkTextField('币种', 'USD')
+    const { field: mulField, input: mulInput } = mkTextField('数值乘数（留空 = 1）', '例如 0.0001')
+
+    customBox.append(
+      urlField,
+      headerField,
+      curField,
+      mulField,
+      $(
+        'div',
+        'dshp-hint',
+        '余额取值二选一：接口直接给「剩余」就填下面第一个；只给「总量」和「已用」（没有剩余字段）就填后两个。',
+      ),
+    )
+    const { field: totalBalField, input: totalBalInput } = mkTextField('余额字段', '例如 data.limit_remaining')
+    const { field: totalField, input: totalInput } = mkTextField('总量字段', '例如 data.total_credits')
+    const { field: usedField, input: usedInput } = mkTextField('已用字段', '例如 data.total_usage')
+    const { field: limitField, input: limitInput } = mkTextField('额度上限字段（可选，配额环用）', '例如 data.limit')
+    customBox.append(totalBalField, totalField, usedField, limitField)
+
+    customBox.append($('div', 'dshp-hint', '用量接口可选：跟余额接口完全独立的第二个接口，专门查「今日已用」（比如 OpenAI 兼容中转站的 /v1/dashboard/billing/usage）。留空就退回余额差分估算。'))
+    const { field: usageUrlField, input: usageUrlInput } = mkTextField('用量接口（可选）', 'https://example.com/api/usage')
+    const { field: usagePathField, input: usagePathInput } = mkTextField('用量字段', '例如 total_usage')
+    const { field: usageMulField, input: usageMulInput } = mkTextField('用量乘数（留空 = 1）', '例如 0.01')
+    customBox.append(usageUrlField, usagePathField, usageMulField)
+
+    customBox.append(
+      $(
+        'div',
+        'dshp-hint',
+        '事件匹配：给完全没有余额/用量接口可查的厂商兜底（比如公司内部网关）。这一轮用的模型名命中下面任意一个关键字（逗号分隔），就改用真实 token 用量 × 下面这份自定义单价直接算钱。留空 = 不启用。',
+      ),
+    )
+    const { field: eventField, input: eventInput } = mkTextField('事件匹配关键字', '会话事件里的模型名关键字，逗号分隔')
+    const { field: hitField, input: hitInput } = mkTextField('缓存命中单价', '例：0.02')
+    const { field: missField, input: missInput } = mkTextField('未命中输入单价', '例：1.0')
+    const { field: outField, input: outInput } = mkTextField('输出单价', '例：4.0')
+    const priceCurField = $('label', 'dshp-field')
+    priceCurField.append($('span', 'dshp-field-label', '单价币种'))
+    const priceCurSel = document.createElement('select')
+    for (const [val, text] of [
+      ['CNY', '人民币（元 / CNY）'],
+      ['USD', '美元（$ / USD）'],
+    ]) {
+      const opt = document.createElement('option')
+      opt.value = val
+      opt.textContent = text
+      priceCurSel.appendChild(opt)
+    }
+    priceCurField.appendChild(priceCurSel)
+    const { field: rateField, input: rateInput } = mkTextField('汇率（仅单价币种选美元时需要）', '例如 7.1')
+    customBox.append(
+      eventField,
+      hitField,
+      missField,
+      outField,
+      priceCurField,
+      rateField,
+      $('div', 'dshp-hint', '单位是「币种 / 百万 token」，三个单价留空则沿用内置 DeepSeek 价目表。'),
+    )
+
+    const CRED_DEFAULT = { deepseek: 'DEEPSEEK_API_KEY', openrouter: 'OPENROUTER_API_KEY', custom: '' }
+    function syncConfigVisibility() {
+      const isCustom = providerSel.value === 'custom'
+      customBox.style.display = isCustom ? '' : 'none'
+      credInput.placeholder = CRED_DEFAULT[providerSel.value] || '凭据名'
+      rateField.style.display = priceCurSel.value === 'USD' ? '' : 'none'
+    }
+    providerSel.addEventListener('change', syncConfigVisibility)
+    priceCurSel.addEventListener('change', syncConfigVisibility)
+    syncConfigVisibility()
+
+    const walletRow = $('div', 'dshp-row')
+    const saveBtn = $('button', 'dshp-btn dshp-primary', '保存')
+    const testBtn = $('button', 'dshp-btn', '保存并测试连接')
+    walletRow.append(saveBtn, testBtn)
+    const statusText = $('div', 'dshp-hint')
+
+    box.append(providerField, credField, customBox, walletRow, statusText)
+
+    // 回填当前配置——先把空表单挂上去，拉到数据再填，不用等接口回来才出现整页
+    fetch(BASE + '/config', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((cfg) => {
+        providerSel.value = cfg.walletProvider || 'deepseek'
+        credInput.value = cfg.walletCredentialKey || ''
+        const c = cfg.walletCustom || {}
+        urlInput.value = c.balanceUrl || ''
+        headerInput.value = c.authHeaderTemplate || ''
+        curInput.value = c.currency || ''
+        mulInput.value = c.valueMultiplier != null ? String(c.valueMultiplier) : ''
+        totalBalInput.value = c.totalBalancePath || ''
+        totalInput.value = c.totalPath || ''
+        usedInput.value = c.usedPath || ''
+        limitInput.value = c.limitPath || ''
+        usageUrlInput.value = c.usageUrl || ''
+        usagePathInput.value = c.usagePath || ''
+        usageMulInput.value = c.usageMultiplier != null ? String(c.usageMultiplier) : ''
+        eventInput.value = c.eventMatchKeywords || ''
+        hitInput.value = c.priceHit != null ? String(c.priceHit) : ''
+        missInput.value = c.priceMiss != null ? String(c.priceMiss) : ''
+        outInput.value = c.priceOut != null ? String(c.priceOut) : ''
+        priceCurSel.value = c.priceCurrency || 'CNY'
+        rateInput.value = c.exchangeRate != null ? String(c.exchangeRate) : ''
+        syncConfigVisibility()
+      })
+      .catch(() => {})
+
+    const numOrNull = (s) => (s.trim() === '' ? null : Number(s.trim()))
+    function collectConfig() {
+      return {
+        walletProvider: providerSel.value,
+        walletCredentialKey: credInput.value.trim(),
+        walletCustom: {
+          balanceUrl: urlInput.value.trim(),
+          authHeaderTemplate: headerInput.value.trim(),
+          currency: curInput.value.trim() || 'USD',
+          valueMultiplier: numOrNull(mulInput.value) || 1,
+          totalBalancePath: totalBalInput.value.trim(),
+          totalPath: totalInput.value.trim(),
+          usedPath: usedInput.value.trim(),
+          limitPath: limitInput.value.trim(),
+          usageUrl: usageUrlInput.value.trim(),
+          usagePath: usagePathInput.value.trim(),
+          usageMultiplier: numOrNull(usageMulInput.value) || 1,
+          eventMatchKeywords: eventInput.value.trim(),
+          priceHit: numOrNull(hitInput.value),
+          priceMiss: numOrNull(missInput.value),
+          priceOut: numOrNull(outInput.value),
+          priceCurrency: priceCurSel.value,
+          exchangeRate: numOrNull(rateInput.value),
+        },
+      }
+    }
+
+    async function saveConfig(thenTest) {
+      saveBtn.disabled = true
+      testBtn.disabled = true
+      statusText.textContent = '保存中…'
+      try {
+        const res = await fetch(BASE + '/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(collectConfig()),
+        })
+        const j = await res.json()
+        if (!j.ok) throw new Error(j.error || '保存失败')
+        statusText.textContent = '已保存'
+        if (thenTest) {
+          statusText.textContent = '保存成功，正在测试连接…'
+          await hudFetch(true)
+          const bad = hud.data && hud.data.code
+          statusText.textContent = bad
+            ? '没连上：' + (hud.data.errText || hud.data.code)
+            : '连上了，右键看一下钱包，数字对不对'
+        }
+      } catch (err) {
+        statusText.textContent = '保存失败：' + String((err && err.message) || err).slice(0, 120)
+      } finally {
+        saveBtn.disabled = false
+        testBtn.disabled = false
+      }
+    }
+    saveBtn.addEventListener('click', () => saveConfig(false))
+    testBtn.addEventListener('click', () => saveConfig(true))
 
     box.append(
       statsHint,
