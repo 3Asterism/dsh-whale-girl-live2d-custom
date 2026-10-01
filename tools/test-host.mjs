@@ -15,7 +15,13 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import os from 'node:os'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+
+// 宿主会往 DSH_HOME 写统计 / 记账 / 通行证——测试必须用临时目录，
+// 否则会把使用者真实的 ~/.dsh/dsh-live2d-pet-stats.json 灌进测试数据（踩过）。
+const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-pet-test-'))
+process.env.DSH_HOME = TMP_HOME
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(HERE, '..')
@@ -111,7 +117,13 @@ const mockCtx = {
   effect(fn) {
     effects.push(fn)
   },
+  // 插件现在在 apply 里自己 root.inject([...], cb) 等服务；mock 里服务是现成的，直接回调
+  inject(deps, cb) {
+    injectedDeps.push(...(Array.isArray(deps) ? deps : []))
+    cb(mockCtx)
+  },
 }
+const injectedDeps = []
 
 // ————————————————————————————————————————————————————————————
 // 起一个把请求派发给注册路由的服务器
@@ -138,12 +150,12 @@ const BASE = `http://127.0.0.1:${PORT}`
 
 console.log('\n宿主插件集成测试 (lib/index.js)\n')
 
-const mod = await import(path.join(ROOT, 'lib', 'index.js'))
+// Windows 上动态 import 必须是 file:// URL，绝对路径会报 ERR_UNSUPPORTED_ESM_URL_SCHEME
+const mod = await import(pathToFileURL(path.join(ROOT, 'lib', 'index.js')).href)
 const plugin = mod.default
 check('模块导出 default 插件对象', !!plugin && typeof plugin.apply === 'function', plugin && plugin.name)
-check('inject 声明了 webServer 与 connection', Array.isArray(plugin.inject) && plugin.inject.includes('webServer') && plugin.inject.includes('connection'), (plugin.inject || []).join(','))
-
 plugin.apply(mockCtx)
+check('inject 声明了 webServer 与 connection', injectedDeps.includes('webServer') && injectedDeps.includes('connection'), injectedDeps.join(','))
 
 const routes = Array.from(exact.keys())
 console.log('  注册路由: ' + routes.join(', '))
@@ -155,8 +167,8 @@ check('注册了 control', exact.has('/dsh-pet/control'))
 check('注册了 state', exact.has('/dsh-pet/state'))
 check('注册了 diag', exact.has('/dsh-pet/diag'))
 check('注册了 standalone', exact.has('/dsh-pet/standalone'))
-check('注册了 model/vendor 前缀路由', prefixes.length === 2, prefixes.map((p) => p.path).join(', '))
-check('挂了 index 注入', indexTaps.length === 1)
+check('注册了 model / vendor / app 前缀路由', prefixes.length === 3, prefixes.map((p) => p.path).join(', '))
+check('挂了 index 注入', indexTaps.length === 1 || (listeners.get('webserver/index-inject') || []).length === 1)
 
 const get = async (p) => {
   const r = await fetch(BASE + p)
@@ -168,8 +180,15 @@ const get = async (p) => {
 // ————————————————————————————————————————————————————————————
 
 const pet = await get('/dsh-pet/pet.js')
-check('pet.js 可取', pet.status === 200 && pet.buf.length > 10000, `${pet.buf.length} 字节, ${pet.type}`)
+check('pet.js（加载器）可取，且保持极小', pet.status === 200 && pet.buf.length > 300 && pet.buf.length < 8000, `${pet.buf.length} 字节, ${pet.type}`)
 check('pet.js 注入了 boot 配置', pet.buf.toString('utf8').includes('__DSH_PET_BOOT__'))
+check('pet.js 是加载器：动态导入前端 ES 模块入口', pet.buf.toString('utf8').includes("import('/dsh-pet/app/main.js')"))
+const appMain = await get('/dsh-pet/app/main.js')
+check('前端模块可取（app/main.js）', appMain.status === 200 && appMain.type.includes('javascript') && appMain.buf.length > 1000, `${appMain.buf.length} 字节`)
+check('前端模块按路径取（嵌套目录）', (await get('/dsh-pet/app/core/state.js')).status === 200 && (await get('/dsh-pet/app/ui/menu/render-pane.js')).status === 200)
+check('前端模块路由挡住路径穿越', (await get('/dsh-pet/app/..%2f..%2fpackage.json')).status === 403 && (await get('/dsh-pet/app/..%2f..%2flib%2findex.js')).status === 403)
+check('不存在的前端模块返回 404', (await get('/dsh-pet/app/nope.js')).status === 404)
+check('前端模块路由不放行非 .js 文件', (await get('/dsh-pet/app/main.json')).status === 403)
 
 const model3 = await get('/dsh-pet/model/c_0120.model3.json')
 check('model3.json 可取', model3.status === 200 && model3.type.includes('json'))
@@ -322,7 +341,8 @@ check(
   Math.abs(turn.amount - want) < 1e-9,
   `算得 ${turn.amount} / 应为 ${want}（${peak ? '高峰' : '空闲'}）`,
 )
-check('今日累计把这一轮加了进去', hudAfter.today.amount >= turn.amount, JSON.stringify(hudAfter.today))
+// 「今日已用」的金额现在靠余额差分算（mock 里没有余额接口，金额恒为 0），所以这里按 token 数断言
+check('今日累计把这一轮加了进去', hudAfter.today.tokens >= turn.tokens, JSON.stringify(hudAfter.today))
 check('同一轮不会重复计数', (() => {
   const seq = turn.seq
   sessionEvent({ id: 'sess-wallet' }, { type: 'turn/end', data: { turn: 9, reason: { kind: 'completed' } } })
@@ -406,8 +426,128 @@ check('工具结果已推送（带耗时）', received.some((m) => m.t === 'tool
 check('assistant 消息已推送（含用量）', received.some((m) => m.t === 'assistant' && m.usage && m.usage.input === 10))
 check('逐字流已推送', received.filter((m) => m.t === 'delta').map((m) => m.text).join('') === '你好', received.filter((m) => m.t === 'delta').map((m) => m.text).join('') || '(空)')
 check('轮次结束已推送', received.some((m) => m.t === 'turn-end' && m.reason && m.reason.kind === 'completed'))
+check('一轮结束会结算羁绊并推给前端（带概要）', received.some((m) => m.t === 'bond' && Array.isArray(m.events) && m.brief && m.brief.level >= 1), JSON.stringify(received.find((m) => m.t === 'bond') || {}).slice(0, 160))
 check('control 指令已广播', received.some((m) => m.t === 'control' && m.mood === 'happy' && m.say === '嗨'))
 check('子代理不抢主会话气泡', received.some((m) => m.t === 'subagent' && m.active === true) && !received.some((m) => m.t === 'turn-start' && m.sessionId === 'sub-9'))
+
+// ————————————————————————————————————————————————————————————
+// v0.5：白名单事件转发 / 新建会话 / 点赞 / 养成路由 / 拖文件喂食
+// ————————————————————————————————————————————————————————————
+
+const slim = mod.slimSessionEvent
+check('slim：todo 数出完成 / 进行中 / 总数',
+  JSON.stringify(slim('todo/write', { todos: [
+    { content: 'a', status: 'completed' }, { content: 'b', status: 'in_progress' }, { content: 'c', status: 'pending' },
+  ] })) === JSON.stringify({ k: 'todo', total: 3, done: 1, doing: 1 }))
+check('slim：不认识的类型 / 空载荷返回 null', slim('tool/call', {}) === null && slim('nope', null) === null)
+check('slim：plan/mode 缺字段当作关闭', slim('plan/mode', { active: true }).active === true && slim('plan/mode', {}).active === false)
+check('slim：retry 带次数与错误码，字段缺失给 null', (() => {
+  const a = slim('llm/retry', { retry: 2, maxRetries: 5, delayMs: 800, failure: { code: 'RATE_LIMIT' } })
+  const b = slim('llm/retry', {})
+  return a.retry === 2 && a.max === 5 && a.delayMs === 800 && a.code === 'RATE_LIMIT' && b.retry === null && b.code === null
+})())
+check('slim：goal 取 phase', slim('goal/change', { goal: { phase: 'complete' } }).phase === 'complete' && slim('goal/change', {}).phase === null)
+check('slim：deliverables 数文件', slim('deliverables/presented', { files: [{}, {}] }).count === 2 && slim('deliverables/presented', {}).count === 1)
+check('slim：approval/policy 只认 never', slim('approval/policy', { policy: 'never' }).policy === 'never' && slim('approval/policy', { policy: 'x' }).policy === 'ask')
+
+const rx2 = []
+const ctl2 = new AbortController()
+const sse2 = await fetch(BASE + '/dsh-pet/events', { signal: ctl2.signal })
+const rd2 = sse2.body.getReader()
+const dec2 = new TextDecoder()
+const done2 = (async () => {
+  try {
+    while (true) {
+      const { done, value } = await rd2.read()
+      if (done) break
+      for (const line of dec2.decode(value).split('\n')) {
+        if (line.startsWith('data: ')) {
+          try { rx2.push(JSON.parse(line.slice(6))) } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {}
+})()
+await new Promise((r) => setTimeout(r, 150))
+
+// 主会话 sess-1（上面已由人类消息认定）
+ev({ id: 'sess-1' }, { type: 'todo/write', data: { todos: [{ content: 'a', status: 'completed' }, { content: 'b', status: 'pending' }] } })
+ev({ id: 'sess-1' }, { type: 'plan/mode', data: { active: true } })
+ev({ id: 'sess-1' }, { type: 'llm/retry', data: { retry: 1, maxRetries: 3, delayMs: 500, failure: { code: 'BUSY' } } })
+ev({ id: 'sess-1' }, { type: 'approval/asked', data: { id: 'a1', toolName: 'bash' } })
+ev({ id: 'sess-1' }, { type: 'approval/decided', data: { id: 'a1', outcome: 'rejected' } })
+// 子代理的同类事件不许进主通道
+ev({ id: 'sub-9' }, { type: 'todo/write', data: { todos: [{ content: 'x', status: 'completed' }] } })
+listeners.get('session/created')[0]({ id: 'sess-new', seq: 0, header: { origin: 'user' } })
+listeners.get('feedback/committed')[0]({ events: [{ type: 'feedback/message-put', data: { item: { rating: 'positive' } } }] })
+listeners.get('feedback/committed')[0]({ events: [{ type: 'feedback/message-delete', data: {} }] }) // 取消评分：不该有反应
+await new Promise((r) => setTimeout(r, 300))
+ctl2.abort()
+await done2
+
+check('转发了 todo 进度（主会话）', rx2.some((m) => m.t === 'sev' && m.k === 'todo' && m.done === 1 && m.total === 2))
+check('子代理的 todo 没有进主通道', rx2.filter((m) => m.t === 'sev' && m.k === 'todo').length === 1)
+check('转发了计划模式', rx2.some((m) => m.t === 'sev' && m.k === 'plan' && m.active === true))
+check('转发了重试（带次数）', rx2.some((m) => m.t === 'sev' && m.k === 'retry' && m.retry === 1 && m.max === 3))
+check('批准请求带工具名', rx2.some((m) => m.t === 'approval' && m.state === 'asked' && m.tool === 'bash'))
+check('批准结果带 outcome', rx2.some((m) => m.t === 'approval' && m.state === 'decided' && m.outcome === 'rejected'))
+check('新建会话已通知（带 blank / origin）', rx2.some((m) => m.t === 'session' && m.kind === 'created' && m.blank === true && m.origin === 'user'))
+check('点赞已转发', rx2.some((m) => m.t === 'sev' && m.k === 'feedback' && m.rating === 'positive'))
+check('取消评分不触发反应', rx2.filter((m) => m.t === 'sev' && m.k === 'feedback').length === 1)
+
+const post = (p, body) => fetch(BASE + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json())
+const cl1 = await post('/dsh-pet/claim', { key: 'greet', scope: 'day' })
+const cl2 = await post('/dsh-pet/claim', { key: 'greet', scope: 'day' })
+check('claim 每日型：第一次领到、第二次没有', cl1.claimed === true && cl2.claimed === false)
+const cl3 = await post('/dsh-pet/claim', { key: 'milestone:turns-100', scope: 'forever' })
+const cl4 = await post('/dsh-pet/claim', { key: 'milestone:turns-100', scope: 'forever' })
+check('claim 永久型：只领一次', cl3.claimed === true && cl4.claimed === false)
+check('claim 非法 key 被拒', (await post('/dsh-pet/claim', { key: '../x y', scope: 'day' })).claimed === false)
+// ———— 羁绊系统（规则的细节在 tools/test-bond.mjs 里单测，这里只验证 HTTP 适配与接线）————
+const bs0 = await (await fetch(BASE + '/dsh-pet/bond')).json()
+check('GET bond：完整快照（10 级 / 来源 / 礼物 / 22 条回忆的规则表）',
+  bs0.ok === true && bs0.levels.length === 10 && bs0.today.sources.length === 8 && bs0.gifts.length === 8 && bs0.memories.length === 22,
+  `${bs0.levels.length}/${bs0.today.sources.length}/${bs0.gifts.length}/${bs0.memories.length}`)
+const ba1 = await post('/dsh-pet/bond/act', { kind: 'poke' })
+const ba2 = await post('/dsh-pet/bond/act', { kind: 'poke' })
+check('bond/act：第一次戳加分，冷却内不再加', ba1.ok === true && ba1.delta === 1 && ba2.delta === 0 && ba2.why === 'cd', JSON.stringify([ba1.delta, ba2.delta]))
+check('bond/act：收工 / 大功告成 / 陪伴 前端不许自己加', (await Promise.all(['turn', 'big', 'companion'].map((k) => post('/dsh-pet/bond/act', { kind: k })))).every((r) => r.ok === false && r.why === 'forbidden'))
+const bd1 = await post('/dsh-pet/bond/act', { kind: 'daily' })
+const bd2 = await post('/dsh-pet/bond/act', { kind: 'daily' })
+check('bond/act：每日首见只加一次（+3）', bd1.delta === 3 && bd2.delta === 0)
+const bf = await post('/dsh-pet/bond/feed', { item: 'rice' })
+check('bond/feed：白饭是最爱，花 1 个 token', bf.ok === true && bf.taste === 'loved' && bf.snapshot.tickets < bs0.tickets + 10, JSON.stringify({ taste: bf.taste, t: bf.snapshot && bf.snapshot.tickets }))
+check('bond/feed：未知礼物被拒', (await post('/dsh-pet/bond/feed', { item: 'bomb' })).why === 'unknown')
+check('bond/memory：白名单内的回忆可以上报，伪造服务端回忆被拒',
+  (await post('/dsh-pet/bond/memory', { id: 'denial' })).ok === true && (await post('/dsh-pet/bond/memory', { id: 'streak-7' })).ok === false)
+check('bond/story：羁绊值不够不能晋级', (await post('/dsh-pet/bond/story', { level: 2 })).ok === false)
+check('bond/away：第一次进来没有离线事件', (await post('/dsh-pet/bond/away', {})).away === false)
+check('bond/toggle：总开关关闭后加分失效', await (async () => {
+  await post('/dsh-pet/bond/toggle', { enabled: false })
+  const off = await post('/dsh-pet/bond/act', { kind: 'stroke' })
+  await post('/dsh-pet/bond/toggle', { enabled: true })
+  return off.why === 'off'
+})())
+check('bond：GET 之外的方法被拒', (await fetch(BASE + '/dsh-pet/bond', { method: 'POST', body: '{}' })).status === 405 && (await fetch(BASE + '/dsh-pet/bond/act')).status === 405)
+const hud5 = await (await fetch(BASE + '/dsh-pet/hud')).json()
+check('HUD stats 带等级 / 羁绊值 / 饭量 / 今日轮数', !!hud5.stats && hud5.stats.affinity >= 4 && hud5.stats.level >= 1 && typeof hud5.stats.levelName === 'string' && Number.isFinite(hud5.stats.riceToday) && Number.isFinite(hud5.stats.riceYesterday) && hud5.stats.turnsToday >= 1, JSON.stringify(hud5.stats))
+check('统计落在临时 DSH_HOME，没碰真实目录', fs.existsSync(path.join(TMP_HOME, 'dsh-live2d-pet-stats.json')))
+
+const feedRes = await fetch(BASE + '/dsh-pet/feed', { method: 'POST', headers: { 'X-File-Name': encodeURIComponent('../../评审 报告?.txt') }, body: Buffer.from('hello') })
+const feed1 = await feedRes.json()
+check('feed：文件落盘并返回路径', feedRes.status === 200 && feed1.ok === true && fs.readFileSync(feed1.path, 'utf8') === 'hello', feed1.path)
+check('feed：文件名洗干净（无路径穿越与非法字符）', feed1.path.startsWith(path.join(TMP_HOME, 'dsh-pet-feed')) && !/[?*"<>|]/.test(feed1.name) && !feed1.name.includes('..'), feed1.name)
+const feed2 = await (await fetch(BASE + '/dsh-pet/feed', { method: 'POST', headers: { 'X-File-Name': encodeURIComponent('../../评审 报告?.txt') }, body: Buffer.from('again') })).json()
+check('feed：同名不覆盖', feed2.ok === true && feed2.path !== feed1.path && fs.readFileSync(feed1.path, 'utf8') === 'hello')
+check('feed：空内容被拒', (await fetch(BASE + '/dsh-pet/feed', { method: 'POST', body: '' })).status === 400)
+let bigStatus = 0
+try {
+  bigStatus = (await fetch(BASE + '/dsh-pet/feed', { method: 'POST', headers: { 'X-File-Name': 'big.bin' }, body: Buffer.alloc(20 * 1024 * 1024 + 1) })).status
+} catch (e) {
+  bigStatus = 413 // 服务端提前断开也算拒绝
+}
+check('feed：超过 20MB 被拒', bigStatus === 413)
+check('feed：GET 不允许', (await fetch(BASE + '/dsh-pet/feed')).status === 405)
 
 // ————————————————————————————————————————————————————————————
 // 自检页 & standalone
@@ -430,7 +570,15 @@ check('ctx.effect 注册了清理函数', typeof effects[0] === 'function')
 // 前端静态检查（跑不了浏览器，至少把关键契约钉住）
 // ————————————————————————————————————————————————————————————
 
-const petSrc = fs.readFileSync(path.join(ROOT, 'assets', 'pet.js'), 'utf8')
+// 前端已拆成 ES 模块（assets/app/**），pet.js 只是加载器：静态检查要读整棵模块树
+const readTree = (dir) =>
+  fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name)
+    return e.isDirectory() ? readTree(p) : e.name.endsWith('.js') ? [p] : []
+  }).sort()
+const petSrc = [path.join(ROOT, 'assets', 'pet.js'), ...readTree(path.join(ROOT, 'assets', 'app'))]
+  .map((f) => fs.readFileSync(f, 'utf8'))
+  .join('\n')
 /** 检查「代码里」有没有某个写法——先把注释剥掉，免得匹配到解释性文字。 */
 const petCode = petSrc
   .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -500,7 +648,7 @@ check(
 )
 check(
   '一次性动作与常驻类分开（动作走 override，不写 userProps）',
-  /function playAction[\s\S]{0,900}act\(\{/.test(petCode) && !/playAction[\s\S]{0,600}rig\.userProps\.add/.test(petCode),
+  /function playAction[\s\S]{0,1800}perform\(\{/.test(petCode) && !/playAction[\s\S]{0,600}rig\.userProps\.add/.test(petCode),
 )
 check('动作自带表情时不压脸（mood: null → 交还给动画）', petCode.includes('mood: null') && petCode.includes('const noFace = a.mood === null'))
 check('白魔爪的前置是粉魔爪（*+5 必须在 *+4 之后）', /clawsWhite:[^}]*needs: 'claws'/.test(petCode))
@@ -508,7 +656,7 @@ check('手机换色的前置是掏出手机', /phoneSkin:[^}]*needs: 'phone'/.te
 check('手机是设备模式（走模型自带开盖动作，不是表情参数）', /phone: \{ label: '掏出手机', device: true/.test(petCode) && petCode.includes('function takeDeviceOut'))
 check('闭眼口水保留（原作者 Alt+T 的正经表情）', /sleepy: \{[^}]*lines/.test(petCode) && !/BANNED_MOODS = new Set\(\['dizzy', 'sleepy'\]\)/.test(petCode))
 check('呆呆眼 / 晕晕 / 泡泡糖 / 重锤出击 都不在菜单里', !/label: '[^']*呆呆眼/.test(petCode) && !/aidale'/.test(petCode.split('FACE_DRIVING_MOTIONS')[0] + ''))
-check('戳她的时候照作者的设计会喷水', petCode.includes("playAction('splash')"))
+check('戳她的时候照作者的设计会喷水', petCode.includes("playAction('splash'"))
 check('爱心粒子用的是模型自带的 love/心跳参数', petCode.includes("add('love'") && petCode.includes("add('ParamCheek73'"))
 check('不干预模型的物理骨骼（尾巴等交给物理自己算）', !petCode.includes('_B_tail3') && !petCode.includes('ParamBodyAngleZ'))
 check(
@@ -520,11 +668,11 @@ check('拖拽不再扭身体（去掉会垮的姿态层）', !petCode.includes('
 check('工作会掏出设备（模型自带的开盖动作）', petCode.includes("playMotion('openLid')") && petCode.includes('WORK_PROPS'))
 check('常态是「本子 + 笔」', /const IDLE_PROPS = \['menuBoard', 'pen'\]/.test(petCode) && /const WORK_PROPS = \['menuBoard', 'pen'\]/.test(petCode))
 check('工作时轮播 认真/摸鱼/思考', petCode.includes('WORK_CYCLE') && petCode.includes('workTick'))
-check('完成 = 开心脸 + 装饰（猫耳/兔耳/花花随机）+ 可选伸懒腰 + 统计气泡', /case 'turn-end'[\s\S]{0,1200}mood: 'happy'/.test(petCode) && petCode.includes("'stickerCat', 'stickerRabbit', 'flower', 'heartbeat'") && petCode.includes('m.tokens'))
-check('工具反应不用手势（只用猫耳等装饰）', !/TOOL_REACT[\s\S]*?doubleV/.test(petCode))
+check('完成 = 开心脸 + 装饰（猫耳/兔耳/花花随机）+ 可选伸懒腰 + 统计气泡', /case 'turn-end'[\s\S]{0,6000}mood: 'happy'/.test(petCode) && petCode.includes("'stickerCat', 'stickerRabbit', 'flower', 'heartbeat'") && petCode.includes('m.tokens'))
+check('工具反应不用手势（只用猫耳等装饰）', !/const TOOL_REACT = \{[\s\S]*?\n\}/.exec(petCode)[0].includes('doubleV'))
 check('查资料才掏出小设备，且切换很慢', petCode.includes('DEVICE_TOOLS') && petCode.includes('device.out') && petCode.includes('9000 + Math.random() * 5000'))
-check('出错只是黑一下脸，很短', /act\(\{[\s\S]{0,200}mood: 'gloomy'/.test(petCode) && petCode.includes('ms: 1600'))
-check('干活时点她也能互动，但不动底层状态（互动完回到工作）', petCode.includes('POKE_BUSY') && /agent\.status !== 'idle'[\s\S]{0,700}act\(\{/.test(petCode))
+check('出错只是黑一下脸，很短', /perform\(\{[\s\S]{0,300}mood: 'gloomy'/.test(petCode) && petCode.includes('ms: 1600'))
+check('干活时点她也能互动，但不动底层状态（互动完回到工作）', petCode.includes('POKE_BUSY') && /agent\.status !== 'idle'[\s\S]{0,900}perform\(\{/.test(petCode))
 check('互动不会把小设备收掉（回得到查资料的样子）', petCode.includes('if (!device.out) stopMotion()'))
 check('工具台词按工具分开且会轮换', petCode.includes('const TOOL_LINE = {') && petCode.includes("'tool-' + m.name") && petCode.includes('function toolHint'))
 check('刚输出的文字会停留，不立刻被结算顶掉', petCode.includes('const keepText') && petCode.includes('agent.lastText'))
@@ -533,9 +681,9 @@ check('自拍/比耶只在特殊场景触发，不进待机循环', !/\['small'/
 // 台词键交叉检查：`pick(SAY.xxx)` 引用了不存在的键，运行时才会炸成
 // 「Cannot read properties of undefined (reading 'length')」——node --check 查不出来。
 {
-  const sayBlock = (petCode.match(/const SAY = \{[\s\S]*?\n  \}/) || [''])[0]
+  const sayBlock = (petCode.match(/const SAY = \{[\s\S]*?\n\}/) || [''])[0]
   const sayKeys = new Set(
-    [...sayBlock.matchAll(/^\s{4}([A-Za-z_][A-Za-z0-9_]*):\s*\[/gm)].map((m) => m[1]),
+    [...sayBlock.matchAll(/^\s{2}([A-Za-z_][A-Za-z0-9_]*):\s*\[/gm)].map((m) => m[1]),
   )
   const sayRefs = new Set([...petCode.matchAll(/\bSAY\.([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1]))
   const missingSay = [...sayRefs].filter((k) => !sayKeys.has(k))
@@ -550,14 +698,21 @@ check('自拍/比耶只在特殊场景触发，不进待机循环', !/\['small'/
   const motionBlock = (petCode.match(/const MOTIONS?[^\n]*\n/) || [''])[0]
   void motionBlock
 }
-check('所有一次性反应都走 act 调度器（没人能绕过去）', petCode.includes('function act(spec)') && (petCode.match(/setReaction\(\{/g) || []).length <= 2)
-check('每次表演前先归零再开始（不重叠）', /function act\(spec\) \{[\s\S]{0,400}stopActing\(\)/.test(petCode))
+check('所有一次性反应都走 perform 仲裁入口（没人能绕过去）', petCode.includes('function perform(spec)') && petCode.includes('function rawAct(spec)') && (petCode.match(/setReaction\(\{/g) || []).length <= 2 && (petCode.match(/\brawAct\(/g) || []).length <= 3)
+check('每次表演前先归零再开始（不重叠）', /function rawAct\(spec\) \{[\s\S]{0,400}stopActing\(\)/.test(petCode))
 check('一次表演 = 一个表情 + 至多一个动作 + 至多一个粒子特效', petCode.includes('function playOneShot'))
 check('一次性动作到点一定收掉（哪怕资产自己写着循环）', /function playOneShot[\s\S]{0,900}stopMotion\(\)/.test(petCode) && petCode.includes('function stopMotion') && petCode.includes('stopAllMotions'))
 check('大锤砸 / 吹泡泡糖 / 呆呆眼 永久移除', petCode.includes("BANNED_MOTIONS") && !/thinking: '呆呆眼'/.test(petCode) && !/playMotion\('bubble'\)/.test(petCode))
+// 待机表情池按「她此刻的心情」分三档（高兴 / 低落 / 平常），三档都不能有会改眼型的、也不能有生气
+const idlePools = (code) => {
+  const m = /function idleExpress[\s\S]*?(const pool = [^\n]*)/.exec(code)
+  return m ? m[1].match(/\[[^\]]*\]/g) || [] : []
+}
 check(
   '待机表情池不含会改变眼型的表情、也不含生气',
-  /const pool = \['shy', 'confused', 'excited', 'alert', 'tongue', 'sweat', 'love'\]/.test(petCode),
+  idlePools(petCode).length === 3 &&
+    idlePools(petCode).every((p) => !/grumpy|dizzy|angry/.test(p)) &&
+    idlePools(petCode).some((p) => p.includes("'shy', 'confused', 'excited', 'alert', 'tongue', 'sweat', 'love'")),
 )
 
 // ——— 连点生气：主人抱怨「平常点几下就生气，不好玩」 ———
@@ -575,13 +730,12 @@ check(
   '炸毛后有冷静期，不会一直凶主人',
   /angerCool:\s*\d+/.test(petCode) && /sinceAnger > T\.angerCool/.test(petCode) && /pokeState\.angerAt/.test(petCode),
 )
-check('平常戳身子池里没有生气的脸（生气只留给手速党）', /const POKE_BODY = \[[\s\S]*?\n  \]/.test(petCode) && !/const POKE_BODY = \[[\s\S]*?mood: 'grumpy'[\s\S]*?\n  \]/.test(petCode))
+check('平常戳身子池里没有生气的脸（生气只留给手速党）', /const POKE_BODY = \[[\s\S]*?\n\]/.test(petCode) && !/const POKE_BODY = \[[\s\S]*?\n\]/.exec(petCode)[0].includes("mood: 'grumpy'"))
 check('摸头池里「被叫胖」那条权重被压低（生气是彩蛋不是常态）', /mood: 'grumpy',\s*\n\s*w: 0\.4/.test(petCode))
 check('反应池支持权重（pickFresh 会读 w）', petCode.includes('weightOf') && /weightOf[\s\S]{0,400}r -= weightOf\(x\)/.test(petCode))
 check(
   '待机时不会再无缘无故摆生气的脸',
-  /const pool = \['shy', 'confused', 'excited', 'alert', 'tongue', 'sweat', 'love'\]/.test(petCode) &&
-    !/idleExpress[\s\S]{0,1200}const pool = \[[^\]]*'grumpy'/.test(petCode),
+  idlePools(petCode).length === 3 && !/idleExpress[\s\S]{0,1200}const pool = [^\n]*'grumpy'/.test(petCode),
 )
 check('一轮结束必须把底层状态复位成平常', /case 'turn-end'[\s\S]{0,900}setBase\('neutral', IDLE_PROPS\)/.test(petCode))
 check('空闲兜底复位（防止漏复位一直挂着某张脸）', petCode.includes('rig.base.mood !== \'neutral\'') || petCode.includes("if (rig.base.mood !== 'neutral') setBase('neutral', IDLE_PROPS)"))
@@ -601,5 +755,8 @@ check('竖直位置只做「别被屏幕切掉」的软夹，不做吸附', /fun
 check('没注册 Expressions（避免和 rig 抢参数）', !JSON.parse(fs.readFileSync(path.join(ROOT, 'assets/model/c_0120.model3.json'), 'utf8')).FileReferences.Expressions)
 
 server.close()
+try {
+  fs.rmSync(TMP_HOME, { recursive: true, force: true })
+} catch (e) {}
 console.log(`\n结果: ${pass} 通过 / ${fail} 失败\n`)
 process.exit(fail > 0 ? 1 : 0)

@@ -1,5 +1,46 @@
 # 更新日志 / Changelog
 
+## 0.6.0 — 2026-10-02
+
+> **English summary**: she now feels alive. A director (`perform()` priorities, cooldowns, habituation,
+> persistent conditions) arbitrates every reaction so features stop fighting each other; the left button is
+> split into tap / hold / drag while stroking happens on a separate hover channel; she reacts to ~60 DSH
+> session events, to DSH UI actions (new session, settings, theme…), to typing and to dropped files; and a
+> new bond system (10 levels, story-gated rank-ups, public gift tastes, low-pressure decay) lives in its
+> own **好感** menu tab with every number and rule visible. The host (`lib/`) and the front end
+> (`assets/app/`) were split from two ~2000-line files into focused modules.
+
+### 新：互动与编排
+
+- **编排内核**：所有一次性反应走 `perform()`（优先级 氛围 < 提示 < 收工 < 报错 < 触碰 < 显式），带冷却、话痨度分档（安静 / 普通 / 话痨）、
+  习惯化（同一互动 90 秒内：全台词 → 半概率 → 只演表情）；持续状态（批准等待 / 重试 / 危险命令 / 计划模式 / 分身 / 放行模式 / 番茄钟……）走 conds，不会被一次性反应顶掉。
+  `DSHPet.director.trace()` 可查最近 50 条决策。
+- **手势分通道**：左键 = 戳 / 按住（挤）/ 拖动（被拎起）三选一；摸头走悬停通道（头部区域来回划，不按键）。
+- **更多钩子**：约 60 种会话事件（todo / 压缩记忆 / 计划模式 / 目标 / 交付物 / 重试 / 批准结果 / 点赞点踩……）、DSH 界面操作（新建会话、开设置、换主题、复制……）、
+  打字时看输入框、清空 = 撤回、拖文件喂她。一轮只演一次收工表演（按目标达成 > 交付物 > 清单全完 > 重活 > 默认的顺序）。
+- **人设与台词重写**：全中文、社畜友好，规范见 `docs/人设与台词规范.md`。
+
+### 新：好感（羁绊）系统与「好感」菜单页
+
+10 级羁绊、羁绊故事晋级、用 token 投喂（喜好公开）、心情 / 饱腹、倾向称号、连续陪伴、离线小事件、22 条回忆、低压衰减、总开关。规则在宿主 `lib/bond`，
+「好感」页把数值、冷却、每日上限、衰减规则全部摊开。设计依据见 `docs/好感系统设计.md`。话痨度 / 应景装扮 / 番茄钟等开关从设置页搬到了这里。
+
+### 改：文案
+
+- 养成货币「粮票」统一改叫 **token**（社区老梗：白饭 = token），台词、菜单、文档里的「词元」也一并改成 token。
+
+### 改：架构拆分
+
+- 宿主 `lib/index.js`（~2000 行）→ `lib/` 下按职责分的模块（`index.js` 约 90 行只做装配）。
+- 前端 `assets/pet.js`（~5000 行）→ `assets/app/` 66 个 ES 模块，`pet.js` 变成加载器。说明见 `assets/app/README.md`。
+- 接口：`/dsh-pet/affinity` 由 `/dsh-pet/bond*` 取代；新增 `/dsh-pet/claim`（双端去重）、`/dsh-pet/feed`（拖文件落盘）。
+
+### 修
+
+- 收工后 2.8 秒的「收工台词」不再把主人刚点开的故事 / 提问气泡顶掉。
+- 测试：宿主单测改读新模块布局；冒烟脚本补上遗失的「隐藏态刷新」用例、更新「钱包面板不自动弹」断言、新增「好感页」用例。
+
+
 ## 0.5.0 — 2026-10-01
 
 > 本包（`dsh-whale-girl-live2d-custom`）是 [Andersen216/dsh-whale-girl-live2d](https://github.com/Andersen216/dsh-whale-girl-live2d)

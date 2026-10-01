@@ -15,9 +15,17 @@
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
+// 预览服务器用**真正的**羁绊引擎（内存存储，不碰真实的 ~/.dsh），这样前端的「好感」页 / 晋级故事 / 投喂
+// 在预览与浏览器自检里走的是和真机同一套规则，而不是一份会和真实规则漂移的假数据。
+const { createBond } = await import(pathToFileURL(path.join(HERE, '..', 'lib', 'bond', 'index.js')).href)
+const bondMem = { raw: undefined }
+let bond = null
+const makeBond = () => (bond = createBond({ read: () => bondMem.raw, write: (b) => (bondMem.raw = JSON.parse(JSON.stringify(b))) }))
+makeBond()
+const previewClaims = new Map()
 const ROOT = path.resolve(HERE, '..')
 const ASSETS = path.join(ROOT, 'assets')
 
@@ -176,6 +184,47 @@ const server = http.createServer((req, res) => {
   if (url.startsWith('/dsh-pet/vendor/')) {
     return serveFile(res, path.join(ASSETS, 'vendor', url.slice('/dsh-pet/vendor/'.length)))
   }
+  // 前端 ES 模块（assets/app/**），和真机宿主的 /dsh-pet/app 路由一致
+  if (url.startsWith('/dsh-pet/app/')) {
+    return serveFile(res, path.join(ASSETS, 'app', decodeURIComponent(url.slice('/dsh-pet/app/'.length))))
+  }
+
+  // ———— 羁绊系统（真引擎 + 内存存储）————
+  if (url === '/dsh-pet/bond' && req.method === 'GET') return send(res, 200, MIME['.json'], JSON.stringify(bond.snapshot()))
+  if (url === '/dsh-pet/claim' || url.startsWith('/dsh-pet/bond/') || url === '/__bond_seed') {
+    let body = ''
+    req.on('data', (c) => (body += c))
+    req.on('end', () => {
+      let b = {}
+      try {
+        b = JSON.parse(body || '{}')
+      } catch (e) {}
+      const out = (o) => send(res, 200, MIME['.json'], JSON.stringify(o))
+      if (url === '/__bond_seed') {
+        // 测试用：直接塞一份羁绊原始数据（比如「羁绊值够了、待晋级」），并重建引擎
+        bondMem.raw = b && Object.keys(b).length ? b : undefined
+        makeBond()
+        return out(bond.snapshot())
+      }
+      if (url === '/dsh-pet/claim') {
+        const key = String(b.key || '')
+        const day = new Date().toISOString().slice(0, 10)
+        const cur = previewClaims.get(key)
+        const ok = b.scope === 'forever' ? cur !== 'forever' : cur !== day
+        if (ok) previewClaims.set(key, b.scope === 'forever' ? 'forever' : day)
+        return out({ ok: true, claimed: ok })
+      }
+      const act = url.slice('/dsh-pet/bond/'.length)
+      if (act === 'act') return out(bond.act(String(b.kind || '')))
+      if (act === 'feed') return out(bond.feed(String(b.item || '')))
+      if (act === 'story') return out(bond.story(Number(b.level)))
+      if (act === 'memory') return out(bond.memory(String(b.id || '')))
+      if (act === 'away') return out(bond.away())
+      if (act === 'toggle') return out(bond.toggle(b.enabled !== false))
+      return send(res, 404, MIME['.json'], '{"ok":false}')
+    })
+    return
+  }
   if (url.startsWith('/dsh-pet/model/')) {
     // 动作文件名是中文的，浏览器会发百分号编码，这里必须解回来，
     // 否则 /dsh-pet/model/motions/%E8%87%AA%E6%8B%8D.motion3.json 会 404。
@@ -207,6 +256,10 @@ const server = http.createServer((req, res) => {
       balance: { ok: true, totalBalance: 42.5, currency: 'CNY', updatedAt: new Date().toISOString() },
       today: { date: '2026-09-25', amount: 3.86, tokens: 1286000 },
       turn: previewLastTurn,
+      stats: (() => {
+        const b = bond.brief()
+        return { days: 1, turns: previewLastTurn.seq, tokens: 0, turnsToday: previewLastTurn.seq, riceToday: 0, riceYesterday: 0, level: b.level, levelName: b.levelName, affinity: b.xp, pending: b.pending }
+      })(),
       priceNote: 'Flash 空闲 0.02/1/4・高峰 ×2（元每百万 token）',
     }))
   }

@@ -318,8 +318,8 @@ async function main() {
     check('菜单可打开且有内容', uiState.menuOn >= 1 && uiState.chips > 3, `${uiState.chips} 个按钮`)
     await shoot('menu')
 
-    const tabs = await evaluate(`(function(){var out=[];document.querySelectorAll('.dshp-tab-btn').forEach(function(b){b.click();out.push(b.textContent+':'+document.querySelectorAll('.dshp-grid .dshp-chip').length)});return out})()`)
-    check('菜单五个分页都能渲染', tabs.length === 5, tabs.join(' '))
+    const tabs = await evaluate(`(function(){var out=[];document.querySelectorAll('.dshp-tab-btn').forEach(function(b){b.click();var p=document.querySelector('.dshp-panes');out.push(b.textContent+':'+p.textContent.length)});return out})()`)
+    check('菜单六个分页都能渲染（每页都有内容）', tabs.length === 6 && tabs.every((t) => Number(t.split(':')[1]) > 20), tabs.join(' '))
 
     // 隐藏之后必须能找到回来的路——之前就是这里坏了（把手挂在 body 上，
     // 显示条件却写成 .dshp-root.dshp-hidden .dshp-tab 的后代选择器，永远不显示）。
@@ -336,6 +336,93 @@ async function main() {
     check('可隐藏', hide.hidden === true)
     check('隐藏后右下角出现「叫回来」把手', hide.tabVisible === true && hide.tabClickable === true)
     check('点把手能恢复', hide.restored === true)
+
+    // ——— 「好感」页：羁绊系统的数值、规则、开关全部摊开，没有隐性设定 ———
+    {
+      const PAGE = `var sl=function(ms){return new Promise(function(r){setTimeout(r,ms)})};
+        var seed=function(raw){return fetch('/__bond_seed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(raw)}).then(function(r){return r.json()})};
+        var panes=function(){return document.querySelector('.dshp-panes')};
+        var openBond=async function(){
+          if(!document.querySelector('.dshp-panel.dshp-on')) document.querySelector('.dshp-dock').children[1].click();
+          document.querySelector('.dshp-tab-btn[data-tab=bond]').click();
+          await sl(450);
+        };
+        var btn=function(txt){var all=panes().querySelectorAll('button');for(var i=0;i<all.length;i++){if(all[i].textContent.indexOf(txt)===0)return all[i]}return null};`
+      const run = async (body) => JSON.parse(await evaluate(`(async function(){ ${PAGE} ${body} })()`))
+
+      // 1) 全新档：页面结构 + 公开的规则
+      const fresh = await run(`
+        await seed({}); await window.DSHPet.bond.refresh(); await openBond();
+        var t=panes().textContent;
+        return JSON.stringify({secs:panes().querySelectorAll('details.dshp-sec').length, card:t.indexOf('Lv.1 初识')>=0,
+          rules:t.indexOf('没有隐性设定')>=0&&t.indexOf('绝不掉级')>=0, today:t.indexOf('每日首见')>=0, forbidden:t.indexOf('体重秤')>=0&&t.indexOf('禁区')>=0,
+          switches:t.indexOf('羁绊系统：开')>=0&&t.indexOf('话痨度：')>=0&&t.indexOf('番茄钟')>=0, tickets:window.DSHPet.bond.snap().tickets})`)
+      check('好感页有 7 个折叠分区（状态/投喂/今日进度/等级/故事回忆/开关/规则）', fresh.secs === 7, String(fresh.secs))
+      check('好感页关系卡显示等级与名称', fresh.card === true)
+      check('好感页把规则摊开（衰减、倍率、token……不掉级）', fresh.rules === true)
+      check('好感页列出每个来源的今日进度、礼物喜好含「禁区」', fresh.today === true && fresh.forbidden === true)
+      check('话痨度 / 番茄钟 / 羁绊总开关都在好感页', fresh.switches === true)
+
+      // 2) 设置页里已经没有搬走的那几个开关
+      const stg = await run(`
+        document.querySelector('.dshp-tab-btn[data-tab=setting]').click(); await sl(100);
+        var t=panes().textContent; var b=[].map.call(panes().querySelectorAll('button'),function(x){return x.textContent}).join('|');
+        return JSON.stringify({chatty:b.indexOf('话痨度')>=0, flair:b.indexOf('应景装扮')>=0, pomo:b.indexOf('番茄钟')>=0, pointer:t.indexOf('「好感」页')>=0})`)
+      check('设置页不再放话痨度 / 应景装扮 / 番茄钟（搬进好感页），并指路', !stg.chatty && !stg.flair && !stg.pomo && stg.pointer, JSON.stringify(stg))
+
+      // 3) 投喂：点「白饭」的按钮，扣 1 个 token、面板收起让位给她的反应
+      const fed = await run(`
+        await seed({}); await window.DSHPet.bond.refresh(); await openBond();
+        var rows=panes().querySelectorAll('.dshp-gift'); var row=null;
+        for(var i=0;i<rows.length;i++) if(rows[i].textContent.indexOf('白饭')>=0) row=rows[i];
+        row.querySelector('button').click(); await sl(700);
+        return JSON.stringify({tickets:window.DSHPet.bond.snap().tickets, panelClosed:!document.querySelector('.dshp-panel.dshp-on'), feeds:window.DSHPet.bond.snap().today.feeds.used})`)
+      check('投喂白饭：token 5→4、今日投喂 +1、面板收起', fed.tickets === 4 && fed.feeds === 1 && fed.panelClosed === true, JSON.stringify(fed))
+
+      // 4) 羁绊值够了 → 状态行提示 + 关系卡出现「听她说」按钮 → 讲故事 → 晋级
+      const pend = await run(`
+        await seed({xp:45,level:1}); await window.DSHPet.bond.refresh(); await openBond();
+        var b=btn('听她说'); var status=window.DSHPet.menu().status;
+        return JSON.stringify({btn:b?b.textContent:null, hint:status.indexOf('她有话想对你说')>=0, pending:window.DSHPet.bond.state().pending})`)
+      check('待晋级：关系卡有「听她说：《白饭的由来》」', pend.pending === true && pend.btn === '听她说：《白饭的由来》', JSON.stringify(pend))
+      check('待晋级：菜单状态行提示去好感页', pend.hint === true)
+
+      const story = await run(`
+        btn('听她说').click(); await sl(500);
+        var ask=document.querySelector('.dshp-ask'); var labels=ask?[].map.call(ask.querySelectorAll('button'),function(x){return x.textContent}):[];
+        var panelClosed=!document.querySelector('.dshp-panel.dshp-on');
+        // 跳过 → 立刻确认晋级
+        for(var i=0;i<labels.length;i++) if(labels[i]==='跳过') ask.querySelectorAll('button')[i].click();
+        await sl(900);
+        var s=window.DSHPet.bond.snap();
+        return JSON.stringify({labels:labels, panelClosed:panelClosed, level:s.level, pending:s.pending, name:s.levelName})`)
+      check('讲故事：面板收起，气泡带「继续 / 跳过」', story.panelClosed === true && story.labels.join() === '继续,跳过', JSON.stringify(story.labels))
+      check('听完（跳过也算）→ 晋级到 Lv.2，不再待晋级', story.level === 2 && story.pending === false, JSON.stringify(story))
+
+      // 5) 重看故事：已听过的有「重看」，且不改任何状态
+      const replay = await run(`
+        await openBond();
+        var open=panes().querySelectorAll('details.dshp-sec'); for(var i=0;i<open.length;i++) open[i].open=true;
+        var chips=[].filter.call(panes().querySelectorAll('.dshp-chip'),function(x){return x.textContent==='重看'});
+        var before=JSON.stringify(window.DSHPet.bond.snap().xp);
+        chips[0].click(); await sl(400);
+        var ask=document.querySelector('.dshp-ask'); var has=!!ask;
+        if(ask){var bs=ask.querySelectorAll('button');for(var j=0;j<bs.length;j++) if(bs[j].textContent==='跳过') bs[j].click()}
+        await sl(500);
+        return JSON.stringify({chips:chips.length, has:has, same:before===JSON.stringify(window.DSHPet.bond.snap().xp), level:window.DSHPet.bond.snap().level})`)
+      check('重看已听过的故事：能播、不改羁绊值和等级', replay.chips >= 1 && replay.has === true && replay.same === true && replay.level === 2, JSON.stringify(replay))
+
+      // 6) 总开关：关掉后页面只剩开关与规则；再打开恢复
+      const off = await run(`
+        await openBond(); btn('羁绊系统：').click(); await sl(800);
+        var t1=panes().textContent; var en1=window.DSHPet.bond.snap().enabled;
+        btn('羁绊系统：').click(); await sl(800);
+        return JSON.stringify({closedCard:t1.indexOf('羁绊系统已关闭')>=0, en1:en1, en2:window.DSHPet.bond.snap().enabled, back:panes().textContent.indexOf('Lv.2')>=0})`)
+      check('羁绊总开关：关 → 页面提示已关闭；再开 → 进度原样恢复', off.closedCard === true && off.en1 === false && off.en2 === true && off.back === true, JSON.stringify(off))
+
+      // 清理：收起面板、还原成全新档
+      await run(`await seed({}); await window.DSHPet.bond.refresh(); document.getElementById('dsh-live2d-pet').classList.remove('dshp-open'); document.querySelectorAll('.dshp-panel.dshp-on').forEach(function(p){p.classList.remove('dshp-on')}); return '1'`)
+    }
 
     // 面板要能关（× 或点别处）
     const panelClose = await evaluate(`(function(){
@@ -979,6 +1066,29 @@ async function main() {
       JSON.stringify(bottomMid.place),
     )
 
+    // 隐藏态要能跨刷新留住：写入隐藏的布局 → 刷新页面 → 她要活着、仍然隐藏、把手可见可点
+    await evaluate(`(function(){ localStorage.setItem('dsh-live2d-pet:layout', JSON.stringify({hidden:true})); return 1 })()`)
+    await send('Page.reload', {}, sessionId, 8000).catch(() => {})
+    let afterHiddenReload = { petAlive: false }
+    for (let i = 0; i < 70; i++) {
+      await sleep(500)
+      try {
+        const r = JSON.parse(
+          await evaluate(`JSON.stringify((function(){
+            var root = document.getElementById('dsh-live2d-pet');
+            var tab = document.querySelector('.dshp-tab');
+            return {
+              petAlive: !!(window.DSHPet && window.DSHPet.state && window.DSHPet.state.modelSize),
+              bootError: window.__DSHPetError || null,
+              hidden: !!root && root.classList.contains('dshp-hidden'),
+              tabVisible: !!tab && getComputedStyle(tab).display !== 'none',
+              tabClickable: !!tab && getComputedStyle(tab).pointerEvents !== 'none'
+            }})())`),
+        )
+        afterHiddenReload = r
+        if (r.petAlive || r.bootError) break
+      } catch (e) {}
+    }
     check('隐藏态持久化后仍能正常启动', afterHiddenReload.petAlive === true, afterHiddenReload.bootError ? String(afterHiddenReload.bootError).split('\n')[0] : '')
     check('重新打开时保持隐藏但把手可见可点', afterHiddenReload.hidden === true && afterHiddenReload.tabVisible && afterHiddenReload.tabClickable, JSON.stringify(afterHiddenReload))
     // 清干净，别把隐藏态留给下一次
@@ -1582,7 +1692,7 @@ async function main() {
       JSON.stringify({menuChanged: hud.menuChanged, menuOpen: hud.menuOpen, hudOpen: hud.afterMenu}),
     )
 
-    // 一轮结束 → 自动弹出「本轮消耗」
+    // 一轮结束 → 只刷新「本轮消耗」数据，面板不自动弹（见 bce41fe：钱包面板彻底不自动弹）
     const pop = JSON.parse(
       await evaluate(`(async function(){
         window.DSHPet.resetEverything();
@@ -1597,8 +1707,8 @@ async function main() {
       })()`),
     )
     check(
-      '一轮结束自动弹出 HUD 并显示「本轮消耗」',
-      pop.open === true && pop.turn && pop.turn.amount !== null && /¥/.test(pop.text.turn),
+      '一轮结束只刷新「本轮消耗」，不自动弹出钱包面板（主人明确不要）',
+      pop.open === false && pop.turn && pop.turn.amount !== null && /¥/.test(pop.text.turn),
       JSON.stringify({open: pop.open, turn: pop.turn, text: pop.text.turn}),
     )
 
