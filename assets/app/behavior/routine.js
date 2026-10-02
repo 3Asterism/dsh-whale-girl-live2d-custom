@@ -1,6 +1,7 @@
 /** behavior/routine.js —— 由 tools/split-front.mjs 从 pet.js 拆出；模块职责见 assets/app/README.md */
 
 import { maybeOfferStory } from './bond.js'
+import { diaryText } from './dev.js'
 import { checkLowBalance } from './soul.js'
 import { CFG } from '../config.js'
 import { R, agent, bond } from '../core/state.js'
@@ -102,7 +103,11 @@ export async function routineTick() {
   // 傍晚「今日账单」：今天确实一起干过活，才说
   if (d.getHours() >= 18 && d.getHours() < 23 && ROUTINE.active.start === 0) {
     const s = hud.stats
-    if (s && s.turnsToday > 0 && (await slot('wrap', { say: 'wrapup', vars: { n: s.turnsToday, r: s.riceToday || 0 }, mood: 'happy', ms: 5000 }))) return
+    if (s && s.turnsToday > 0 && (await slot('wrap', { say: 'wrapup', vars: { n: s.turnsToday, r: s.riceToday || 0 }, mood: 'happy', ms: 5000 }))) {
+      const dt = diaryText() // 今日小账：只有次数（提交 / push / 测试 / 改了几个文件），写在这句收工台词的脚注里
+      if (dt) R.ui.bubble.note(dt)
+      return
+    }
   }
   if (d.getHours() === 23 && (await slot('sleepy1', { say: 'sleepy1', mood: 'sleepy' }))) return
   if (d.getHours() >= 1 && d.getHours() < 4 && (await slot('sleepy2', { say: 'sleepy2', mood: 'sleepy' }))) return

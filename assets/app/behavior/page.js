@@ -13,6 +13,7 @@ import { R } from '../core/state.js'
 import { PRI, noteUser, perform } from '../director/perform.js'
 import { PAGE_ACTIONS, PAGE_INTENTS } from '../persona/page-actions.js'
 import { bondAwayCheck, bondMemory } from './bond.js'
+import { empathyNewSession, empathySignal } from './observe.js'
 import { noteModelPick, noteRegen } from './soul.js'
 
 /** 最近点过的标签（只存标签，本地内存，不上传；DSHPet.page.recent() 供校准识别表）。 */
@@ -26,6 +27,9 @@ export function pageIntent(key) {
   perform(Object.assign({ id: 'page-' + key, pri: PRI.CUE, say: key }, d))
   if (key === 'newSession') bondMemory('new-page')
   if (key === 'regen') noteRegen() // 2 分钟内点了 3 次「重新生成」：她会抱头
+  if (key === 'regen') empathySignal('regen')
+  else if (key === 'stopBtn') empathySignal('stop')
+  else if (key === 'newSession') empathyNewSession() // 刚失败不久就换个会话重来
 }
 
 /**

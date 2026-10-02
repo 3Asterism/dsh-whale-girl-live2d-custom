@@ -203,7 +203,7 @@ const server = http.createServer((req, res) => {
 
   // ———— 羁绊系统（真引擎 + 内存存储）————
   if (url === '/dsh-pet/bond' && req.method === 'GET') return send(res, 200, MIME['.json'], JSON.stringify(bond.snapshot()))
-  if (url === '/dsh-pet/claim' || url.startsWith('/dsh-pet/bond/') || url === '/__bond_seed') {
+  if (url === '/dsh-pet/claim' || url.startsWith('/dsh-pet/bond/') || url === '/__bond_seed' || url === '/__claims_reset') {
     let body = ''
     req.on('data', (c) => (body += c))
     req.on('end', () => {
@@ -217,6 +217,11 @@ const server = http.createServer((req, res) => {
         bondMem.raw = b && Object.keys(b).length ? b : undefined
         makeBond()
         return out(bond.snapshot())
+      }
+      if (url === '/__claims_reset') {
+        // 测试用：清掉「每天一次 / 终身一次」的领取记录（每日一签的邀请、问候这类 claim 才能反复测）
+        previewClaims.clear()
+        return out({ ok: true })
       }
       if (url === '/dsh-pet/claim') {
         const key = String(b.key || '')

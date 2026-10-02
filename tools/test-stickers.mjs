@@ -76,7 +76,7 @@ check('所有池里引用的表情包都真实存在', dangling.length === 0, da
 const coreSrc = fs.readFileSync(path.join(APP, 'persona', 'lines.js'), 'utf8')
 const coreIds = [...coreSrc.matchAll(/^  ([A-Za-z0-9_]+): [\[{]/gm)].map((m) => m[1])
 const lineIds = new Set([...coreIds, ...Object.keys(BOND_LINES), ...Object.keys(SOUL_LINES), ...Object.keys(SCENE_LINES)])
-const NO_STICKER = new Set([]) // 实在没法适配的才写进来，并在这里写明原因
+const NO_STICKER = new Set(['careGentle', 'careHelp']) // 实在没法适配的才写进来，并在这里写明原因：高风险（自伤倾向）的关心不玩梗、不配图
 const unmapped = [...lineIds].filter((k) => !data.EVENT_STICKER[k] && !NO_STICKER.has(k))
 check(`每个台词 id 都配了表情包（共 ${lineIds.size} 个）`, unmapped.length === 0, unmapped.join(', ') || '全部覆盖')
 check('主要的直接传台词的表演也配了（待机碎碎念 / 醒来 / 收拾桌面 / 被打断 / 工具报错）', ['idle-mutter', 'wake', 'menu-tidy', 'finish-abort', 'tool-error'].every((k) => data.EVENT_STICKER[k]))
@@ -87,7 +87,7 @@ check('新台词不提第三方模型品牌、不叫「鱼片」', !allLines.som
 const newLines = [...Object.values(SOUL_LINES).flat(), ...Object.values(SCENE_LINES).flat(), ...Object.values(MAMA_EXTRA).flat()]
 check('新台词每条 ≤ 28 字、至多一个全角括号动作', newLines.every((s) => s.length <= 28 && (s.match(/（/g) || []).length <= 1), newLines.filter((s) => s.length > 28 || (s.match(/（/g) || []).length > 1).join(' | '))
 
-// —— v0.6.7：157 张全用上、单发图池、反差萌、妈妈梗 ——
+// —— v0.5.7：157 张全用上、单发图池、反差萌、妈妈梗 ——
 console.log('\n表情包 · 全量使用与新场景\n')
 const usedIds = new Set([...allRefs.values()].map((r) => r.id))
 const unused = ids.filter((i) => !usedIds.has(i))

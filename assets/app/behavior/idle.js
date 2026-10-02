@@ -2,6 +2,7 @@
 
 import { TYPING } from './page.js'
 import { routineTick } from './routine.js'
+import { observeTick, userEngaged } from './observe.js'
 import { SOUL, soulTick } from './soul.js'
 import { CFG } from '../config.js'
 import { EXPR, R, agent, bond } from '../core/state.js'
@@ -161,7 +162,7 @@ function runIdleBehavior() {
     }
     case 'solo':
       // 「没操作」的意思是主人 40 秒内没动过键鼠、agent 也没在干活；气泡里有话的时候不插图
-      if (Date.now() - Math.max(SOUL.lastInput, agent.lastActivity) < 40000 || CFG.idleChat === false || R.ui.bubble.visible) break
+      if (Date.now() - Math.max(SOUL.lastInput, agent.lastActivity) < 40000 || CFG.idleChat === false || R.ui.bubble.visible || userEngaged()) break
       perform({ id: 'idle-solo', pri: PRI.AMBIENT, tier: 'extra', habit: false, props: IDLE_PROPS, solo: idleSoloPool(), ms: 2600, cool: 45000 })
       break
     case 'nopang':
@@ -185,6 +186,8 @@ export function startLoops() {
   setTimeout(() => routineTick().catch(() => {}), 8000)
   // 发呆搭话（输入框写了一半停着 / 一阵子没动静）：15 秒看一次，只在话痨档、她醒着、没别的在演时才出声
   setInterval(() => soulTick({ typing: TYPING, sleeping: idle.sleep !== 0 }), 15000)
+  // 观察者发言的编排器：每 5 秒看一眼槽（槽是空的几乎零开销）；任务边界另有一次即时的看
+  setInterval(observeTick, 5000)
   // 羁绊快照：每 10 分钟刷一次（心情 / 饱腹是随时间变的，待机行为要读它；顺带检查有没有「待晋级」）
   setInterval(() => bondRefresh(), 10 * 60000)
 

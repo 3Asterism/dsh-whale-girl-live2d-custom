@@ -1,6 +1,7 @@
 /** director/conds.js —— 由 tools/split-front.mjs 从 pet.js 拆出；模块职责见 assets/app/README.md */
 
 import { bondMemory } from '../behavior/bond.js'
+import { empathySignal, observeApproval } from '../behavior/observe.js'
 import { noteProcess } from '../behavior/events.js'
 import { CFG } from '../config.js'
 import { activeSubagents } from '../core/state.js'
@@ -61,6 +62,7 @@ function clearApprovalTimers() {
 }
 
 export function approvalAsked() {
+  observeApproval() // 批准疲劳：10 分钟里被问 ≥6 次
   clearApprovalTimers()
   FLAG.approval = 0
   syncConds()
@@ -85,6 +87,7 @@ export function approvalDecided(outcome) {
   if (outcome === 'allowed-once') perform({ id: 'approval-yes', pri: PRI.CUE, tier: 'core', mood: 'happy', say: 'approvalYes', ms: 2200 })
   // 提议被拒：「小丑竟是我自己」。六成演自嘲版（rejectClown，配小丑图），四成是平和的「好吧听主人的」
   else if (outcome === 'rejected') {
+    empathySignal('reject')
     const ms = perform({ id: 'approval-no', pri: PRI.CUE, tier: 'core', mood: 'sad', say: Math.random() < 0.6 ? 'rejectClown' : 'approvalNo', ms: 2600 })
     if (ms) bondMemory('clown', 3500)
   }
@@ -94,6 +97,7 @@ export function approvalDecided(outcome) {
 let retryTimer = null
 
 export function retryEvent(m) {
+  empathySignal('retry')
   FLAG.retry = Math.max(1, Number(m.retry) || 1)
   syncConds()
   noteProcess('重试 ' + FLAG.retry + (m.max ? '/' + m.max : ''))

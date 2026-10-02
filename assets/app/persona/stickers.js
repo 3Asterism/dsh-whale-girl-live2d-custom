@@ -112,7 +112,7 @@ export const EVENT_STICKER = {
   approval2: ['nervous1', 'megaphone'],
   approval3: ['work_nap', 'sleep_prep2'],
   approvalYes: ['thumbs_up', 'nod'],
-  approvalNo: ['clown1', 'clown2', 'headshake'], // 提议被拒：小丑竟是我自己 / 摇头认了
+  approvalNo: ['clown1', 'clown2'], // 提议被拒：小丑竟是我自己（梗按真实含义用，别往池子里掺别的）
   retry1: ['sweat', 'stopped', 'bug'],
   retry3: ['fine1', 'fine2', 'fine3'], // 重试三次还嘴硬：This is fine
   retryOk: ['smile', 'swat'],
@@ -263,7 +263,47 @@ export const EVENT_STICKER = {
   failJail: ['jail', 'jail2'], // 又失败了：坐牢
   failFine: ['fine1', 'fine2', 'fine3'], // 连续失败还硬撑：This is fine
   rejectClown: ['clown1', 'clown2'],
-  // —— v0.6.7：界面操作（behavior/page.js；标签是中英双语的最佳猜测，对不上就不触发，无副作用）——
+  // —— v0.6.8：开发动作（shell 命令里认出来的）与每日一签 ——
+  // —— v0.6.8：复合故事 / 观察者的轻话 / 安慰（careGentle、careHelp 刻意不配图）——
+  storyShip: ['celebrate', 'cheer', 'dance_calm'],
+  storyPush: ['drive', 'arrive', 'cheer'], // 驾驶＝发车上路
+  storyCommit: ['button', 'note1', 'celebrate'],
+  storyDebugWin: ['cheer', 'celebrate', 'swat'], // 把虫子拍死
+  storyEnv: ['eat_donut', 'work', 'arrive'],
+  storyTested: ['thumbs_up', 'nod', 'score10'],
+  storyRedCommit: ['sweat', 'nervous1'],
+  storyRedEnd: ['sweat', 'selfcomfort'],
+  storyNoTest: ['question', 'nervous1'],
+  storyPlanDone: ['celebrate', 'idea', 'note1'],
+  storyRollback: ['headpat', 'selfcomfort', 'cheer'],
+  storyRegression: ['sweat', 'bug', 'nervous1'],
+  storyCmdLoop: ['dizzy', 'jail', 'sweat'],
+  storyThrash: ['dizzy', 'question', 'sweat'],
+  storyUnverified: ['question', 'nervous1'],
+  storyCheckpoint: ['button', 'note1', 'point'],
+  storyInstallFail: ['question', 'bug'],
+  storyLongSession: ['peek1', 'work_tired', 'hypno'],
+  secretAdd: ['exclaim', 'afraid1', 'scared'],
+  finishRelief: ['celebrate', 'cheer', 'dance_calm'],
+  restartAfterFail: ['idea', 'hello1'],
+  empathyRage: ['headpat', 'selfcomfort', 'love2'],
+  empathyLoop: ['headpat', 'think_serious', 'selfcomfort'],
+  empathyFail: ['selfcomfort', 'headpat', 'jail2'],
+  empathyReject: ['sweat', 'headpat'],
+  empathyLate: ['hypno', 'sleep_prep1', 'work_nap'],
+  empathyHard: ['headpat', 'love2', 'selfcomfort'],
+  breakStart: ['drink', 'dance_calm'],
+  breakEnd: ['wink', 'cheer'],
+  breakNo: ['wink'],
+  fortuneOffer: ['expect1', 'expect2', 'magic'],
+  fortuneNo: ['wink'],
+  fortuneAgain: ['point'],
+  fortuneBig: ['celebrate', 'cheer', 'dance_caramell'],
+  fortuneMid: ['thumbs_up', 'smile'],
+  fortuneSmall: ['nod', 'smile'],
+  fortuneEnd: ['wink', 'sweat'],
+  fortuneBad: ['headpat', 'selfcomfort', 'love2'],
+  // —— v0.5.7：界面操作（behavior/page.js；标签是中英双语的最佳猜测，对不上就不触发，无副作用）——
   pageAttach: ['gift1', 'gift2'],
   pageShare: ['megaphone', 'celebrate'],
   pageExport: ['gift1', 'snap_phone'],
@@ -310,7 +350,7 @@ export const FALLBACK_STICKER = ['smile', 'nod', 'wink', 'blank1', 'smile_point'
  * ask_user_question / read_image 是「有意义的事件」，不节流（见 behavior/events.js）。
  */
 export const TOOL_STICKER = {
-  ask_user_question: ['question', 'point'],
+  ask_user_question: ['question'], // 举牌问号；「就是你」的 point 留给等太久（approval1 / askUserWait）
   read_image: ['think_confident', 'snap_phone', 'snap_cam'],
   todo_write: ['note1', 'note2'],
   bash: ['type', 'work'],

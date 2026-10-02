@@ -7,6 +7,8 @@ import { TYPING } from './page.js'
 import { onTurnFinished } from './routine.js'
 import { noteReplyText, reactToUserText, replyMood } from './sentiment.js'
 import { handleSev, sessionCreated } from './sev.js'
+import { devToolCall, devToolResult, devTurnDone, diaryState } from './dev.js'
+import { empathyComforted, empathySignal, observeCommand, observeToolCall, observeTurnEnd, observeTurnStart, observeUserMsg } from './observe.js'
 import { noteAskDone, noteAskUser, noteThinking, stopThinking } from './soul.js'
 import { BASE, CFG } from '../config.js'
 import { EXPR, R, activeSubagents, agent } from '../core/state.js'
@@ -20,6 +22,7 @@ import { playMotion } from '../engine/motion.js'
 import { clearProps, rig, setBase, setProp } from '../engine/rig.js'
 import { device, endWork, putDeviceAway, startWork } from '../engine/work.js'
 import { IDLE_PROPS, WORK_PROPS } from '../persona/items.js'
+import { isSecretAdd } from '../persona/devhooks.js'
 import { isDangerous } from '../persona/keywords.js'
 import { lineFor } from '../persona/lines.js'
 import { SAY } from '../persona/say.js'
@@ -102,6 +105,7 @@ export function handleEvent(m) {
 
     case 'user':
       TYPING.sentAt = performance.now()
+      observeUserMsg()
       noteUser()
       setStatus('listening')
       rig.talking = false
@@ -119,6 +123,7 @@ export function handleEvent(m) {
       agent.lastText = ''
       agent.tokens = 0
       resetDigest()
+      observeTurnStart() // 这一轮的账清零（命令成败 / 红绿，只记账不说话）
       resetTurnFlags()
       setStatus('thinking')
       rig.talking = false
@@ -182,6 +187,8 @@ export function handleEvent(m) {
 
     case 'tool-call': {
       stopThinking()
+      devToolCall(m) // 认出「提交 / push / 测试…」这类开发动作（结果回来再反应）
+      observeToolCall(m) // 改文件工具：同一个文件被改了几次（只记哈希）
       setStatus('working')
       rig.talking = false
       const react = TOOL_REACT[m.name] || { mood: 'reading', prop: 'glassesRound' }
@@ -238,6 +245,8 @@ export function handleEvent(m) {
         ]
         longToolTimers.set(m.callId, slow)
       }
+      // 密钥要进提交（git add .env / 私钥）：和危险命令一样是少数可以在中途出声的安全提醒，只提醒不拦截
+      if (CFG.devHooks !== false && isSecretAdd(m.name, m.args)) perform({ id: 'secret-add', pri: PRI.ALERT, tier: 'core', mood: 'alert', say: 'secretAdd', ms: 3800, cool: 20000, habit: false })
       // 危险命令：只提醒不拦截。放在最后，免得上面那句工具台词把这句顶掉
       if (isDangerous(m.name, m.args)) {
         FLAG.danger = m.callId || 'x'
@@ -280,6 +289,10 @@ export function handleEvent(m) {
           perform({ id: 'long-tool-done', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'longToolDone', ms: 3000, cool: 60000 })
         }
       }
+      // 开发命令的结果：**只记账、不说话**（一轮中途插话最容易被关掉）。成败进这一轮的账，复合故事在一轮结束时才出（observe.js）
+      const cmd = devToolResult(m)
+      if (cmd) observeCommand(cmd.kind, cmd.outcome, cmd.fp)
+      if (m.error) empathySignal('toolError')
       break
     }
 
@@ -334,6 +347,8 @@ export function handleEvent(m) {
       } else if (kind === 'error') {
         FLAG.fails++
       }
+      // 复合故事 + 心情（任务边界）：flavor 顶替收工那句，note / 安慰递给编排器排队，过了闸才说
+      const obs = observeTurnEnd({ kind, files: digest.files, errors: digest.errors, todoAll: digest.todoTotal >= 3 && digest.todoDone === digest.todoTotal, commitsToday: diaryState().commit })
 
       if (kind === 'completed') {
         // 庆祝：开心脸 + 伸个懒腰 + 一个装饰（猫耳/兔耳/花花随机一个）+ 一句台词。
@@ -347,7 +362,8 @@ export function handleEvent(m) {
         // 所以先只做表情+装饰的庆祝，文字留在气泡里；过两秒多再把结束台词接上。
         const keepText = R.ui.bubble.visible && !!agent.lastText
         // 一轮只演一个收工表演：目标达成 > 交付物 > 失败后终于过了 > 清单全完 > 重活 > 默认
-        const flavor = finishFlavor(m.ms, m.tokens)
+        const flavor = finishFlavor(m.ms, m.tokens, obs)
+        devTurnDone({ files: digest.files, recovered: FLAG.recovered }) // 今日小账：只记次数
         if (flavor && FINISH_MEMORY[flavor.id]) bondMemory(FINISH_MEMORY[flavor.id])
         const statText = stat.join(' · ')
         if (flavor && flavor.action) {
@@ -390,6 +406,7 @@ export function handleEvent(m) {
         const em = (m.reason && m.reason.error && m.reason.error.message) || '出错了'
         // 连着失败 2 次以上（或一轮里报了 3 次以上错）：不再自嘲，站在主人这边把锅给 bug
         const streak = FLAG.fails >= 2 || digest.errors >= 3
+        if (streak) empathyComforted() // 下面那句「站在主人这边」就是安慰，别紧接着再安慰一次
         // 失败升级序列（梗按真实含义用）：第 1 次「停止工作」弹窗 → 连着 2 次/同轮报错≥3 次「坐牢」→ 连着 3 次以上「一切都好」
         const ladder = FLAG.fails >= 3 ? 'fine' : streak ? 'jail' : 'stopped'
         const sticker = ladder === 'fine' ? pickFresh(['fine1', 'fine2'], 'fail-fine') : ladder === 'jail' ? 'jail' : 'stopped'

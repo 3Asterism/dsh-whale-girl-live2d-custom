@@ -411,6 +411,25 @@ streamListener({ agent: { session: { id: 'sess-1' } }, frame: { type: 'start', t
 streamListener({ agent: { session: { id: 'sess-1' } }, frame: { type: 'chunk', attemptId: 'a1', revision: 2, index: 0, time: 0, chunk: { type: 'text-delta', index: 0, text: '你' } } })
 streamListener({ agent: { session: { id: 'sess-1' } }, frame: { type: 'chunk', attemptId: 'a1', revision: 3, index: 1, time: 1, chunk: { type: 'text-delta', index: 0, text: '好' } } })
 
+// 真实 DSH 形态的 tool/result：调用 id 在 message.toolCallId，内容是块数组；非零退出码不报错，只在末尾写 [exit code: N]
+const realResult = (callId, text, extra = {}) => ({
+  type: 'tool/result',
+  data: { turn: 1, step: 2, message: { role: 'tool', source: { kind: 'tool', callId }, toolCallId: callId, content: [{ type: 'text', text }], isError: false }, ...extra },
+})
+const callBash = (callId, name, command) => ev({ id: 'sess-1' }, { type: 'tool/call', data: { turn: 1, step: 2, callId, name, arguments: JSON.stringify({ command, description: 'x' }) } })
+callBash('r1', 'bash', 'npm test')
+ev({ id: 'sess-1' }, realResult('r1', 'FAIL src/a.test.js\nAPI_KEY=sk-secret-123\n[exit code: 1]'))
+callBash('r2', 'pwsh', 'git commit -m x')
+ev({ id: 'sess-1' }, realResult('r2', '[main abc123] x\n 1 file changed'))
+callBash('r3', 'bash', 'npm run dev')
+ev({ id: 'sess-1' }, realResult('r3', 'ready\n[still running after 30000ms; moved to background job j7]\nThe command keeps running in the background.'))
+callBash('r4', 'bash', 'cat /root/x')
+ev({ id: 'sess-1' }, realResult('r4', '[sandbox: file access denied under read-only mode]\n[exit code: 1]'))
+ev({ id: 'sess-1' }, { type: 'tool/call', data: { turn: 1, step: 2, callId: 'r5', name: 'read', arguments: '{"path":"a"}' } })
+ev({ id: 'sess-1' }, realResult('r5', 'file text\n[exit code: 1]'))
+callBash('r6', 'bash', 'false')
+ev({ id: 'sess-1' }, realResult('r6', 'boom', { error: { name: 'ToolError', code: 'SPAWN' } }))
+
 // 子代理会话不应该抢主会话的气泡
 ev({ id: 'sub-9' }, { type: 'turn/start', data: { turn: 1 } })
 
@@ -432,6 +451,12 @@ check('轮次开始已推送', types.includes('turn-start'))
 check('步骤开始已推送', types.includes('step-start'))
 check('工具调用已推送（含中文标签）', received.some((m) => m.t === 'tool-call' && m.label === '跑命令'), JSON.stringify(received.find((m) => m.t === 'tool-call') || {}))
 check('工具结果已推送（带耗时）', received.some((m) => m.t === 'tool-result' && typeof m.ms === 'number'))
+const trByCall = (id) => received.find((m) => m.t === 'tool-result' && m.callId === id) || {}
+check('真实形态的 tool/result：调用 id 取 message.toolCallId，前端拿得到工具名和耗时（旧写法在真实 DSH 里拿不到）', trByCall('r1').name === 'bash' && typeof trByCall('r1').ms === 'number' && trByCall('r2').name === 'pwsh', JSON.stringify(trByCall('r1')))
+check('shell 工具：非零退出码转成 exit（不算 error），退出码 0 / 无标记给 exit: 0', trByCall('r1').exit === 1 && !trByCall('r1').error && trByCall('r2').exit === 0)
+check('后台命令（还没跑完）标 bg、沙箱拒绝标 denied，exit 都是 null（不知道，别当成功）', trByCall('r3').bg === true && trByCall('r3').exit === null && trByCall('r4').denied === true && trByCall('r4').exit === null)
+check('非 shell 工具结果里碰巧有 [exit code] 字样不算；基础设施报错（isError）不带 exit', !('exit' in trByCall('r5')) && trByCall('r6').error && !('exit' in trByCall('r6')))
+check('隐私：只转退出码，命令输出（密钥、路径）一个字都不出宿主', !JSON.stringify(received).includes('sk-secret-123') && !JSON.stringify(received.filter((m) => m.t === 'tool-result')).includes('FAIL src'))
 check('assistant 消息已推送（含用量）', received.some((m) => m.t === 'assistant' && m.usage && m.usage.input === 10))
 check('逐字流已推送', received.filter((m) => m.t === 'delta').map((m) => m.text).join('') === '你好', received.filter((m) => m.t === 'delta').map((m) => m.text).join('') || '(空)')
 check('轮次结束已推送', received.some((m) => m.t === 'turn-end' && m.reason && m.reason.kind === 'completed'))
@@ -473,7 +498,7 @@ check('slim：command/run 只转命令名，不转 args（args 可能是用户�
 })())
 check('slim：agent-preset/selected / schedule/change / permission/preset', slim('agent-preset/selected', { agentPreset: 'coder' }).preset === 'coder' && slim('schedule/change', { operation: 'create' }).op === 'create' && slim('schedule/change', { operation: 'weird' }).op === null && slim('permission/preset', { preset: 'auto' }).preset === 'auto')
 
-// v0.6.7：压缩的中间步骤 / 工作流启停 / 团队动静：只转「发生了」，不转内容
+// v0.5.7：压缩的中间步骤 / 工作流启停 / 团队动静：只转「发生了」，不转内容
 check('slim：compaction 四个阶段（start / prune / summary / end）', ['compaction/start', 'compaction/prune', 'compaction/summary', 'compaction/end'].map((t) => slim(t, {}).phase).join(',') === 'start,prune,summary,end' && slim('compaction/prune', { summary: '机密摘要' }).k === 'compaction' && !JSON.stringify(slim('compaction/summary', { text: '机密摘要' })).includes('机密'))
 check('slim：工作流启停只转启停，不转名字（名字可能带项目信息）', (() => {
   const a = slim('tool-workflow/run-start', { runId: 'r1', name: '重构我的秘密项目' })

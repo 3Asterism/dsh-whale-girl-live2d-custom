@@ -5,6 +5,7 @@ import { claim } from '../net/api.js'
 import { lineFor } from '../persona/lines.js'
 import { hud } from '../ui/hud.js'
 import { bondAct } from './bond.js'
+import { scheduleFortuneOffer } from './dev.js'
 
 /** 每日第一次对话：按时段问候；周末 / 周一 / 周五还在干活的，换成更贴的那句；带上「昨天吃了几碗饭」。 */
 let greetBusy = false
@@ -24,6 +25,7 @@ export async function maybeGreet() {
     if (line && !special && yest > 0) line += '\n昨天吃了 ' + yest + ' 碗饭～'
     bondAct('daily')
     perform({ id: 'greet', pri: PRI.CUE, tier: 'extra', mood: 'happy', line, ms: 4200, habit: false })
+    scheduleFortuneOffer() // 每天第一次见面：过几秒问一句「要抽签吗」（点按钮才抽）
   } finally {
     greetBusy = false
   }

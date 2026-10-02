@@ -10,7 +10,7 @@
  *   · 你重复点「重新生成」≥3 次 → 「怎么还不满意」
  *   · 钱包余额 < 5 元 → 「要米」
  *   · 你发呆：输入框写了一半停着 / 一阵子没动静 → 探头问一句（只在话痨档）
- *   · v0.6.7：工作流启停（Raid 举牌）/ 团队有动静 / 静置阶梯（没操作就打游戏摸鱼）
+ *   · v0.5.7：工作流启停（Raid 举牌）/ 团队有动静 / 静置阶梯（没操作就打游戏摸鱼）
  * 触发源是宿主的 sev 事件（lib/events/slim.js）与 DOM；话在 persona/lines-soul.js，图在 persona/stickers.js。
  *
  * 隐私：台词里不出现模型名（人设规范：不提第三方模型品牌）；斜杠命令只用名字，宿主不转参数。
@@ -22,6 +22,7 @@ import { R, agent } from '../core/state.js'
 import { DIR, PRI, perform, performingNow } from '../director/perform.js'
 import { claim } from '../net/api.js'
 import { bondMemory } from './bond.js'
+import { userEngaged } from './observe.js'
 import { hud } from '../ui/hud.js'
 
 export const SOUL = {
@@ -295,7 +296,7 @@ export function soulTick(ctx) {
   const t = performance.now()
   // 静置阶梯：安静满 60 秒（睡着之前）→ 单发「打游戏」。她睡着、有面板开着、刚互动过都不会出现
   const still = Date.now() - Math.max(SOUL.lastInput, agent.lastActivity)
-  if (still > 60000 && still < 170000 && SOUL.idle.gameKey !== SOUL.lastInput && t - DIR.lastUser > 20000) {
+  if (still > 60000 && still < 170000 && SOUL.idle.gameKey !== SOUL.lastInput && t - DIR.lastUser > 20000 && !userEngaged()) {
     SOUL.idle.gameKey = SOUL.lastInput
     if (perform({ id: 'soul-idle-game', pri: PRI.AMBIENT, tier: 'extra', habit: false, solo: 'idleGame', ms: 2600, cool: 4 * 60000 })) return
   }

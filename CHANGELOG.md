@@ -1,5 +1,68 @@
 # 更新日志 / Changelog
 
+## 0.6.8 — 2026-10-03
+
+> **English summary**: companionship + "she understands what you're doing", built only on signals the DSH host really exposes.
+> Researched mature virtual-pet / AI-companion products and developer-assistant timing studies (docs/陪伴设计调研.md).
+> (1) **Fixed a production bug**: the bridge read the tool-call id from `message.content[0].toolCallId`, but DSH puts it in
+> `message.toolCallId` — so tool-results reached the pet without tool name/duration and slow-tool timers never cleared.
+> (2) **Real command outcomes**: bash/pwsh report non-zero exits only as an `[exit code: N]` marker (not as an error); the host now extracts just
+> that number (never the output), so she truly knows red/green. (3) **Compound-action stories** (edit→test→commit, red→green debugging,
+> install+build…) shown only at turn end, *replacing* the default finish line. (4) **Frustration model** (decaying score from text/regenerate/stop/
+> reject/retry/red tests, with a self-harm branch that never jokes). (5) An **orchestrator** so none of this crowds out normal interactions:
+> nothing mid-turn, one pending slot, gates (typing/ask/approval/focus/recent interaction), a 90 s gap and hourly cap.
+> Plus a privacy-safe daily ledger and a daily fortune (omikuji).
+
+### 修：生产 bug —— 工具结果的调用 id
+- DSH 的 `tool/result` 事件里，调用 id 在 `message.toolCallId`（DSH 自己的 ACP 就这么读），宿主一直读的是 `message.content[0].toolCallId`——真实 DSH 里多半是空的。
+  后果：前端收到的 tool-result 没有工具名和耗时，**慢工具的 30 秒 / 90 秒「摸鱼」定时器清不掉**（工具早结束了她还在说「我去睡了」）。已改成 `message.toolCallId`（兜底旧写法），测试用真实形态的事件。
+
+### 她真的知道命令成没成（退出码）
+- DSH 的 bash / pwsh 对**非零退出码不报错**，只在结果末尾写 `[exit code: N]`（`[timed out…]` / `[killed by signal]` / `[sandbox: … denied]` / `[still running … background job]` 同理）。
+  宿主新增 `lib/events/result.js`：只抽数字 / 布尔（`exit`、`bg`、`denied`、`timedOut`）转给前端，**命令输出一个字都不出宿主**（测试里用带密钥的假输出验证）。
+  之前把「有没有报错」当成「命令有没有失败」是错的——失败的测试大多是正常结果加一个退出码。0 = 成功，非零 = 失败，没有 / null（老宿主、被信号杀掉、超时）= 不知道，**既不当成功也不当失败**。
+
+### 复合操作：一轮结束时合成一个故事（顶替收工那句）
+- 命令只在本地正则分类（提交 / push / 拉代码 / 测试 / 装依赖 / 构建 / 检查），**一轮中途只记账、不说话**——调研：任务边界接受率最高（commit 之后 52%），写到一半插话 62% 被直接关掉。
+- 一轮结束时按「真实成败」合成故事：红了 ≥2 次后绿了=**调试战**；改文件 + 测试绿 + 提交=**一条龙**；push 成功 / 提交成功；装依赖 + 构建成功=搭环境。
+  这些**顶替**默认的收工那一句（一轮只演一个收工表演），所以不增加任何发言。失败（push 被拒 / 提交失败）不庆祝；没有退出码就不说。
+- 只有话痨档的轻话（排队，不当场说）：红着收工、测试还红着就提交、改了很多文件没跑测试、改完就测还绿着。
+- 今日小账（只记次数，本机）：提交 / push / 测试（含红几次）/ 改了几个文件 / 修好几次；晚上收工那句的脚注里附一行。
+
+### 看懂主人的心情：挫败度，不是「看见一个词就安慰」
+- 信号叠加成一个会衰减（半衰期 4 分钟）的分数：口气（崩溃 / 气死 / 还是不行 / 怎么又 / wtf / still not working，只对口语化短消息算，粘贴的日志不算）、
+  **重复发同一句话**（二元组指纹相似度 ≥0.75，内存里只留最近 3 句 10 分钟，不留原文）、大喊、重新生成、停止、提议被拒、重试、报错、**测试连红 / 连着几轮红色收场**；顺利收工 / 道谢把分数拉下去。
+- 到线（≥45）才安慰，别小题大做：一次小事远远不到线；软安慰 15 分钟最多一次，重一点的（≥75，带「歇五分钟」按钮，点了才歇）40 分钟最多一次；安慰过分数降下来；深夜换成哄睡口吻。
+  口吻按主要原因（火气 / 打转 / 失败 / 被拒），先承接情绪、不说教。绷了一阵之后这一轮终于顺了，收工换成「终于顺了」。刚失败不久就新建会话，轻轻说「换个会话重来也好」。
+- **高风险（自伤倾向）走另一条路**：只认明确表述（「笑死 / 累死 / 想死你了」不算），只给一句温柔的话 + 一句提醒找身边信得过的人，**不玩梗、不配图**，不进挫败度。
+- 设置页新增「情绪陪伴」「开发动作反应」「每日一签」三个开关。
+
+### 编排：不挤占正常互动（persona/orchestra.js，纯函数 + 单测）
+1. **中途不说**，只在 agent 空闲（任务边界）说；2. **一次只留一条待说**（槽位，价值更高才替换，会过期、不补播）；
+3. **过闸**：安静档不说、主人在打字（5 秒内）、刚点过她（12 秒内）、有提问 / 批准 / 危险命令在等、番茄钟专注、气泡被占着、她正在演别的、面板开着，都不说；
+4. **配额**：两次发言至少隔 90 秒，每小时上限（普通档 6 / 话痨档 12）；5. **优先级低于一切正常互动**：用 CUE 级，戳她 / 摸头 / 关键词 / 点界面 / 报错 / 批准随时能顶掉它，它顶不掉别人；
+6. 说出口后让日常提醒 / 待机碎碎念往后退，不叠在一起；7. 高风险关心是唯一例外（不受配额限制，只避开「正等你点按钮」）。
+- 待机单发图、静置打游戏、每日一签的邀请也让路：主人在打字 / 番茄钟专注 / 有提问等着时不出现。
+
+### 每日一签（おみくじ）
+- 每天第一次见面过几秒问一句「要抽签吗」，点按钮才抽、不点就算了、一天只问一次、深夜不问；同一天永远同一支（只由日期决定）；吉凶比例照神社签，「凶」永远是安慰口吻；
+  幸运图优先挑图鉴里还没收的表情包（当天固定），她丢出来就顺手收进图鉴。说「抽签 / 运势 / 占卜」也能当场抽，抽过了提醒「签不能反悔」。
+
+### vibe coding 的经典流程与经典翻车（第三轮）
+- 调研了 vibe coding 的经典流程（探索 → 计划 → 小步实现 → 测试 → 看 diff → 提交当存档点 → 上下文长了换新会话）和经典翻车，对照「DSH 真能 hook 到什么」做成复合场景，详见 `docs/陪伴设计调研.md` 第 6 节。
+- **新复合场景**（都在一轮结束时、过编排器的闸；flavor 类顶替收工那句）：改一个 bug 出三个（绿了又红）、原地打转（同一条命令失败 ≥3 次 / 同一个文件改 ≥5 次，只记哈希）、
+  过早宣布完成（改完没测、主人接着抱怨 → 最对症的一句）、上下文腐烂（压缩 ≥2 次 / 聊了 ≥25 轮 → 建议换新会话）、提交当存档点（绿了还没提交过）、
+  慌了就回滚（reset / checkout / restore / revert / stash 成功 → 「回滚不丢人」）、幻觉依赖（装不上）、先计划再动手（plan 模式 + 清单全划掉）、批准疲劳（10 分钟 ≥6 次，只给挫败度）。
+- **安全提醒**：`git add .env` / 私钥 / .pem / credentials（.env.example 不算）→ 中途当场提醒「密钥别进仓库」，和危险命令一样是少数可以在中途出声的，只提醒不拦截。
+- 测试：`test-empathy` 68、`test-dev` 29、`smoke-scenes` 98（含每个翻车的浏览器场景）。自检里的几处偶发失败（待机大脑随机占气泡、图鉴上报抢跑）已处理：加了让待机大脑安静的测试钩子。
+
+### 测试与已知限制
+- 新增 `tools/test-empathy.mjs`（58 项：文本信号、重复检测、衰减 / 阈值 / 冷却、编排器的各种冲突场景、复合故事只用真实信号）；`test-dev` 29、`test-host` 231（含真实形态的 tool/result、退出码、隐私）；
+  `smoke-scenes` 98 项（中途不说话、故事顶替收工、打字时让路、正常互动顶掉观察者、配额、安静档、安慰 / 高风险 / 关掉开关…）。
+- 复合判断只用 hook 得到的信号：命令类别靠正则（少见的工具链认不出就没反应）；后台命令（`run_in_background`）跑完的通知没接（还不知道它在 DSH 里以什么事件到达）。
+- 敲头那张图只在「被骂笨」里极少出现——之前说过不要大锤砸头的 Live2D 动作，这是 96px 小图，不同一件事；看着不舒服就从 `kwScold` 池里删。
+- 今日小账只存本机，换浏览器不会带走。「记忆透明页」（查看 / 暂停 / 清除她记得的）、稀有访客、衣橱沉淀写在调研文档的「下一步」里，这一版没做。
+
 ## 0.6.7 — 2026-10-02
 
 > **English summary**: all 157 of the original stickers are now used (was 92) and every one is wired to at least one scene

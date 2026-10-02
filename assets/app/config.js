@@ -40,8 +40,8 @@ export const BASE = '/dsh-pet'
   CFG.flair = saved.flair == null ? true : !!saved.flair
   CFG.nightCloth = saved.nightCloth === true // 夜晚自动换深色桌布：默认关（待机默认外观不能自己变）
   // 自动互动的分项开关（「好感」页里能看到、能关）：默认全开
-  // stickers = 气泡里台词后面的表情包；idleChat = 你发呆时她搭一句话
-  for (const k of ['pageAware', 'keywords', 'routine', 'typing', 'stickers', 'idleChat']) CFG[k] = saved[k] == null ? CFG[k] !== false : !!saved[k]
+  // stickers = 气泡里台词后面的表情包；idleChat = 你发呆时她搭一句话；devHooks = 认出你在提交 / 测试 / 装依赖并接一句；fortune = 每日一签
+  for (const k of ['pageAware', 'keywords', 'routine', 'typing', 'stickers', 'idleChat', 'devHooks', 'fortune', 'empathy']) CFG[k] = saved[k] == null ? CFG[k] !== false : !!saved[k]
 }
 
 export const MOTION_PRIORITY = { NONE: 0, IDLE: 1, NORMAL: 2, FORCE: 3 }

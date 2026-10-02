@@ -6,6 +6,8 @@ import { menuStatusLine, playAction } from '../behavior/menu-actions.js'
 import { PAGE, pageIntent } from '../behavior/page.js'
 import { routineTick } from '../behavior/routine.js'
 import { SOUL, checkLowBalance, soulTick } from '../behavior/soul.js'
+import { EMO, ORCH, empathySignal, empathyText, observeReset, observeState, observeTick } from '../behavior/observe.js'
+import { DEV, diaryState, diaryText, drawFortune, resetDiary, scheduleFortuneOffer } from '../behavior/dev.js'
 import { pokeState, pokeTier, pokeTierForGaps } from '../behavior/poke.js'
 import { resetEverything } from '../behavior/reset.js'
 import { CFG } from '../config.js'
@@ -126,12 +128,35 @@ window.DSHPet = {
     routine: () => routineTick(), // 测日常节律（心愿提一句 / 每周回顾）：手动跑一次
     lowBalance: () => checkLowBalance(), // 测「余额不足要米」：按当前 hud.data 判断一次
     idleTick: (ctx) => soulTick(ctx), // 测发呆搭话：手动喂一个 { typing, sleeping }
+    // 测试用：让待机大脑安静 ms 毫秒（它每几秒随机说话 / 换表情 / 丢单发图，会让依赖「气泡空着」的自检偶发失败）
+    quietIdle: (ms) => {
+      idle.nextAt = performance.now() + (ms || 60000)
+    },
     // 测「没操作 N 毫秒」：把主人最近一次动键鼠 / agent 最近一次活动拨到 ms 毫秒以前（静置阶梯 / 待机单发图都读它们）
     stillFor: (ms) => {
       SOUL.lastInput = Date.now() - ms
       agent.lastActivity = Date.now() - ms
     },
     soul: () => JSON.parse(JSON.stringify(SOUL, (k, v) => (k === 'timers' || k === 'timer' ? undefined : v))),
+  },
+  /** 观察者：挫败度 / 编排器 / 这一轮的账（测试 / 调试用） */
+  observe: {
+    state: () => observeState(),
+    signal: (k) => empathySignal(k),
+    text: (s) => empathyText(s),
+    tick: () => observeTick(),
+    reset: () => observeReset(),
+    offer: (c) => ORCH.offer(c, performance.now()),
+    emo: () => EMO,
+  },
+  /** 开发动作钩子 / 今日小账 / 每日一签（测试 / 调试用） */
+  dev: {
+    diary: () => diaryState(),
+    diaryText: () => diaryText(),
+    pending: () => DEV.pending.size,
+    fortune: () => drawFortune(),
+    offer: () => scheduleFortuneOffer(0, 1, { anyHour: true }),
+    resetDay: () => resetDiary(),
   },
   /** 诊断用：直接喂一条宿主事件（跟 SSE 推来的一样），撞车测试 / 预览服务器用。 */
   sim: (m) => handleEvent(m),

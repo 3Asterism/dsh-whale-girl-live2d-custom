@@ -7,6 +7,7 @@ import { digest } from '../director/digest.js'
 import { PRI, perform } from '../director/perform.js'
 import { qBounce } from '../engine/effects.js'
 import { bondAct } from './bond.js'
+import { observeCompaction, observeNewSession, observePlan } from './observe.js'
 import { handleSoulSev } from './soul.js'
 
 // ——————————————————————————————————————————————————————————————
@@ -30,6 +31,7 @@ export function handleSev(m) {
     case 'plan':
       if (!!m.active === FLAG.plan) break
       FLAG.plan = !!m.active
+      observePlan(m.active) // 先计划再动手：记下，清单全划掉时夸一句
       syncConds() // 方眼镜（应景装扮）
       perform({ id: m.active ? 'plan-on' : 'plan-off', pri: PRI.CUE, tier: 'extra', say: m.active ? 'planOn' : 'planOff', ms: 2400, cool: 3000 })
       break
@@ -74,6 +76,7 @@ const COMPACT = { at: 0, timer: null }
 function onCompaction(phase) {
   const now = performance.now()
   if (phase === 'start') {
+    observeCompaction() // 压缩过好几次 = 上下文腐烂的信号（会话聊太长）
     COMPACT.at = now
     clearTimeout(COMPACT.timer)
     // 整理记忆：拿橡皮擦。开始 / 结束各一句，结束比开始轻
@@ -98,6 +101,7 @@ export function sessionCreated(m) {
   FLAG.yolo = false
   syncConds()
   if (m.blank !== true) return
+  observeNewSession() // 换了新会话：会话级的账清零
   if (/subagent|fork|workflow|team|agent/i.test(String(m.origin || ''))) return
   pageIntent('newSession')
 }
