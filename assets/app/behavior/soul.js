@@ -10,6 +10,7 @@
  *   · 你重复点「重新生成」≥3 次 → 「怎么还不满意」
  *   · 钱包余额 < 5 元 → 「要米」
  *   · 你发呆：输入框写了一半停着 / 一阵子没动静 → 探头问一句（只在话痨档）
+ *   · v0.6.7：工作流启停（Raid 举牌）/ 团队有动静 / 静置阶梯（没操作就打游戏摸鱼）
  * 触发源是宿主的 sev 事件（lib/events/slim.js）与 DOM；话在 persona/lines-soul.js，图在 persona/stickers.js。
  *
  * 隐私：台词里不出现模型名（人设规范：不提第三方模型品牌）；斜杠命令只用名字，宿主不转参数。
@@ -31,7 +32,7 @@ export const SOUL = {
   ask: null, // { callId, timer }
   regen: [],
   lastInput: Date.now(), // 页面上最近一次鼠标/键盘（发呆判断用）
-  idle: { inputKey: -1, quietKey: -1 },
+  idle: { inputKey: -1, quietKey: -1, gameKey: -1 },
 }
 
 const isDeepSeek = (m) => !!m && /deepseek/i.test(`${m.provider || ''} ${m.model || ''}`)
@@ -63,6 +64,14 @@ export function handleSoulSev(m) {
         perform({ id: 'soul-persona', pri: PRI.CUE, tier: 'extra', mood: 'excited', say: 'personaSwitch', ms: 2600, cool: 8000 })
       }
       SOUL.persona = m.preset
+      return
+    case 'workflow':
+      // 工作流编排一批分身：开始举 Raid 牌「出击」，结束清点人数
+      if (m.phase === 'start') perform({ id: 'soul-workflow-start', pri: PRI.CUE, tier: 'extra', mood: 'excited', say: 'workflowStart', ms: 2600, cool: 8000 })
+      else perform({ id: 'soul-workflow-end', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'workflowEnd', ms: 2600, cool: 8000 })
+      return
+    case 'team':
+      perform({ id: 'soul-team', pri: PRI.CUE, tier: 'chatty', mood: 'alert', say: 'teamActivity', ms: 2400, cool: 45000 })
       return
     case 'schedule':
       if (m.op === 'create') perform({ id: 'soul-schedule-new', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'scheduleNew', ms: 2800, cool: 6000 })
@@ -269,7 +278,8 @@ const INPUT_IDLE_MS = 45000
 const QUIET_MS = 120000
 
 /**
- * 每 15 秒看一次。两种发呆，全是 chatty 档（话痨才出现）、AMBIENT 优先级、走主动发话预算：
+ * 每 15 秒看一次。先看「静置阶梯」：主人安静满 60 秒、她还没睡，就单发一张「打游戏」表情包（摸鱼；不带台词、不占主动发话预算、一段安静只出一次）。
+ * 再看两种发呆，全是 chatty 档（话痨才出现）、AMBIENT 优先级、走主动发话预算：
  *   1) 输入框里写了字、聚焦着、45 秒没按键：探头问「想好怎么说了吗」（同一段停顿只问一次）；
  *   2) 页面 2 分钟没人动（她还没睡着）：托腮一句（一段安静只说一次）。
  * 她睡着了（idle.sleep）、有面板开着、刚互动过、刚说过话，都不插嘴。
@@ -283,6 +293,12 @@ export function soulTick(ctx) {
   const root = R.ui.root.classList
   if (root.contains('dshp-open') || root.contains('dshp-hidden')) return
   const t = performance.now()
+  // 静置阶梯：安静满 60 秒（睡着之前）→ 单发「打游戏」。她睡着、有面板开着、刚互动过都不会出现
+  const still = Date.now() - Math.max(SOUL.lastInput, agent.lastActivity)
+  if (still > 60000 && still < 170000 && SOUL.idle.gameKey !== SOUL.lastInput && t - DIR.lastUser > 20000) {
+    SOUL.idle.gameKey = SOUL.lastInput
+    if (perform({ id: 'soul-idle-game', pri: PRI.AMBIENT, tier: 'extra', habit: false, solo: 'idleGame', ms: 2600, cool: 4 * 60000 })) return
+  }
   if (t - DIR.lastProactive < 3 * 60000 || t - DIR.lastUser < 20000) return
 
   const typing = ctx.typing

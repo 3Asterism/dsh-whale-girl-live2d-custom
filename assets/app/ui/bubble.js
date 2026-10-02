@@ -147,7 +147,7 @@ export function makeBubble(el, body, foot, dot, headText, msg, onResize) {
       if (!stickerOk() || !(L > 0) || askRow) return false
       const hasText = api.visible && !el.classList.contains('dshp-solo') && !!body.textContent
       if (!mountSk(id)) return false
-      noteShown(id)
+      if (!opts.noted) noteShown(id)
       if (hasText) {
         fadeSkAfter(Math.min(opts.maxMs || Infinity, stickyMs(L)))
         return true
@@ -162,6 +162,11 @@ export function makeBubble(el, body, foot, dot, headText, msg, onResize) {
       const ttl = opts.ttl != null ? opts.ttl : opts.maxMs ? opts.maxMs : soloTtl(L)
       timer = setTimeout(() => api.hide(), ttl + snapExtra(ttl, L))
       return true
+    },
+    /** 从一个候选池里挑一张（偏好近 90 秒没用过的、等级够的）再单发；池子里没有能出的图就返回 false。 */
+    soloFrom(pool, opts) {
+      const id = chooseSticker({ pool, ttl: null })
+      return id ? api.sticker(id, Object.assign({}, opts, { noted: true })) : false // chooseSticker 已经记过账了
     },
     /** 只在「现在挂着的是纯表情包小气泡」时才收起（比如深度思考结束了）；有字的气泡不动。 */
     dropSolo() {

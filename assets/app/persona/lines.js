@@ -11,6 +11,7 @@ import { bond } from '../core/state.js'
 import { pickFresh } from '../core/util.js'
 import { BOND_LINES } from './lines-bond.js'
 import { SOUL_LINES } from './lines-soul.js'
+import { MAMA_EXTRA, SCENE_LINES } from './lines-scenes.js'
 
 const CORE_LINES = {
   // —— 触碰 ——
@@ -70,8 +71,8 @@ const CORE_LINES = {
   welcomeLong: ['好久不见…人家还以为主人不要人家了', '（扑过来）想你了啦！'],
   // —— agent 事件 ——
   todoAll: ['清单全划掉啦！（比耶）', '（盖章）每一项都做完了～', '一条一条划掉，最爽了'],
-  compactStart: ['（捧着一堆纸）记忆满了，人家整理一下', '脑袋有点满…先收拾收拾'],
-  compactEnd: ['（擦汗）清爽啦', '整理好了，该忘的都忘了（认真）', '（拍拍手）桌面干净了～'],
+  compactStart: ['（捧着一堆纸）记忆满了，人家整理一下', '脑袋有点满…先收拾收拾', '（挽袖子）记忆满啦，人家来收拾，主人坐着就好', '（拍拍）满了就整理，别慌，有小只妈妈在'],
+  compactEnd: ['（擦汗）清爽啦', '整理好了，该忘的都忘了（认真）', '（拍拍手）桌面干净了～', '（摸摸）整理完了，お疲れ様～', '（叉腰）该留的都留着，该忘的…就忘了吧'],
   approval0: ['需要主人点一下确认～', '（举牌）这个可以做吗？', '人家不敢擅自动手，主人看一眼嘛'],
   approval1: ['（扯袖子）主人～在吗～', '！主人！等你点头呢', '（戳戳）喂喂，这边需要你'],
   approval2: ['（冒汗）等得人家心慌…', '主人是不是忘了人家在等', '（转圈）人家要一直举牌吗'],
@@ -137,7 +138,11 @@ const CORE_LINES = {
   levelUp: ['（小声）和主人的关系变成「{name}」了…', '升级啦！我们现在是「{name}」～'],
 }
 
-const LINES = { ...CORE_LINES, ...BOND_LINES, ...SOUL_LINES }
+const LINES = { ...CORE_LINES, ...BOND_LINES, ...SOUL_LINES, ...SCENE_LINES }
+// 「小只妈妈」梗：给已有的关心类台词池各补一两句（反射式否认 + 手上照顾），见 lines-scenes.js
+for (const [id, extra] of Object.entries(MAMA_EXTRA)) {
+  if (Array.isArray(LINES[id])) LINES[id] = LINES[id].concat(extra)
+}
 
 /**
  * 取一句台词：按台词档分（有分档池时 70% 用本档，其余用通用池），同池不连续重复。

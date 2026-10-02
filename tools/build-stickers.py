@@ -2,16 +2,16 @@
 """
 把「蓝色大肥鱼」表情包（赤风RED，https://space.bilibili.com/356746604）压成气泡里能用的小图。
 
-用法：  python tools/build-stickers.py "<原始 gif 目录>" [--size 96] [--fps 25] [--colors 63] [--max-kb 210] [--max-total-mb 12]
+用法：  python tools/build-stickers.py "<原始 gif 目录>" [--size 96] [--fps 25] [--colors 63] [--max-kb 210] [--max-total-mb 24]
 依赖：  pip install pillow（仅开发期工具，不进发布包——package.json#files 不含 tools/）
 
 做什么（原图：500×500、透明底、20ms/帧、单圈 0.2–4s）：
-  1. 只处理 tools/stickers.curation.json 里挑中的图；
+  1. 只处理 tools/stickers.curation.json 里挑中的图（现在是原图全部 157 张）；某张可写 "speed": 1.6 让单圈过长的图加速、"colors": 40 给色多帧多的图减色；
   2. 先取全部帧的透明包围盒裁掉空白，再缩成方形 SIZE×SIZE（人物才占满画面，44px 里看得清脸）；
   3. 抽帧到 FPS（默认 25fps = 40ms/帧，肉眼无差）；
   4. 全局调色板（默认 63 色 + 1 个透明色），不抖动（赛璐璐风格不需要），只写帧间差异；
   5. 输出 assets/stickers/<id>.gif 与 manifest.json（时长在这里测定，运行时不再解析 GIF）；
-  6. 校验预算：单张 ≤ MAX_KB（默认 210）、总计 ≤ MAX_TOTAL_MB（默认 12），超标直接失败，不静默放过。
+  6. 校验预算：单张 ≤ MAX_KB（默认 210）、总计 ≤ MAX_TOTAL_MB（默认 24），超标直接失败，不静默放过。
 """
 import argparse
 import glob
@@ -46,10 +46,10 @@ def load_frames(path):
     return frames
 
 
-def resample_time(frames, step_ms):
-    """按固定间隔取样：第 k 个输出帧取「时刻 k*step 正在显示」的那一帧。"""
+def resample_time(frames, step_ms, speed=1.0):
+    """按固定间隔取样：第 k 个输出帧取「时刻 k*step 正在显示」的那一帧。speed>1 = 整体加速（原图单圈太长的才用）。"""
     total = sum(d for _, d in frames)
-    n = max(2, round(total / step_ms))
+    n = max(2, round(total / speed / step_ms))
     starts, t = [], 0
     for _, d in frames:
         starts.append(t)
@@ -128,8 +128,8 @@ def main():
     ap.add_argument("--fps", type=int, default=25)
     ap.add_argument("--colors", type=int, default=63, help="调色板色数（另留 1 个透明色）")
     ap.add_argument("--max-kb", type=int, default=210)
-    ap.add_argument("--max-total-mb", type=float, default=12.0)
-    ap.add_argument("--max-ms", type=int, default=2600, help="单圈超过这个时长的不收")
+    ap.add_argument("--max-total-mb", type=float, default=24.0)
+    ap.add_argument("--max-ms", type=int, default=2700, help="单圈超过这个时长的不收")
     args = ap.parse_args()
     step = round(1000 / args.fps)
 
@@ -145,14 +145,14 @@ def main():
     for c in cur:
         path = find_source(args.src, c["src"])
         frames, _ = (lambda fs: (fs, 0))(load_frames(path))
-        sampled, loop_ms = resample_time(frames, step)
+        sampled, loop_ms = resample_time(frames, step, float(c.get("speed", 1.0)))
         if loop_ms > args.max_ms:
             too_long.append((c["id"], loop_ms))
             continue
         crop = square_crop(union_bbox(sampled), *sampled[0].size)
         cropped = [crop_pad(f, crop) for f in sampled]
         out = os.path.join(OUT_DIR, c["id"] + ".gif")
-        encode(cropped, args.size, step, out, args.colors)
+        encode(cropped, args.size, step, out, int(c.get("colors", args.colors)))
         kb = os.path.getsize(out) / 1024
         total += os.path.getsize(out)
         if kb > args.max_kb:

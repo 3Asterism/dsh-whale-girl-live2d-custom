@@ -466,6 +466,29 @@ const seedWish = (id, extra = {}) => ({ firstSeenAt: MON - 5 * 24 * HOUR, wish: 
     return h2.snapshot().album.got === 2 && h2.snapshot().album.ids.includes('s1') && !h2.snapshot().album.ids.includes('ghost')
   })())
 
+  // v0.6.7：清单从 10 张扩到 25 张（92 → 157 同理）：集齐过的老存档不能再显示「梗大全 ✓」，重新集齐只庆祝、不重复发奖
+  {
+    const old = make({ stickers: CAT })
+    for (let i = 1; i <= 10; i++) old.sticker('s' + i)
+    const raw = JSON.parse(JSON.stringify(mem.bond))
+    const BIG = CAT.concat(Array.from({ length: 15 }, (_, i) => 'n' + (i + 1)))
+    const grown = createBond({ read: () => raw, write: () => {}, clock: () => now, stickers: BIG })
+    const sg = grown.snapshot().album
+    check('图鉴扩容：老存档集齐过 10/10，扩到 25 张后「梗大全」不再亮，别的按新总数重算', sg.total === 25 && sg.got === 10 && !sg.milestones.find((m) => m.title === '梗大全').done && !sg.milestones.find((m) => m.title === '梗百科').done && sg.milestones.find((m) => m.title === '梗学家').done && sg.milestones.find((m) => m.title === '图鉴学徒').done, JSON.stringify(sg.milestones.map((m) => [m.title, m.need, m.done])))
+    check('图鉴扩容：奖励记账（paid）保留，已有回忆不丢', sg.milestones.every((m) => m.paid) && grown.snapshot().memories.find((m) => m.id === 'album-full').unlockedAt > 0)
+    const evs = []
+    for (let i = 1; i <= 15; i++) evs.push(...grown.sticker('n' + i).events.filter((e) => e.type === 'album'))
+    check('图鉴扩容：重新达成 梗百科 / 梗大全 只庆祝、奖励不重复发（xp 0、again）', evs.map((e) => e.title).join(',') === '梗百科,梗大全' && evs.every((e) => e.xp === 0 && e.again === true) && evs[1].full === true, JSON.stringify(evs))
+    check('图鉴扩容：重新集齐后全部 done，再报一遍不再有事件', grown.snapshot().album.milestones.every((m) => m.done) && grown.sticker('n1').events.length === 0)
+    check('图鉴扩容：没领过奖的新里程碑照常发奖（旧存档 5/25 → 学徒）', (() => {
+      const fresh = make({ stickers: BIG })
+      const evs2 = []
+      for (let i = 1; i <= 3; i++) evs2.push(...fresh.sticker('n' + i).events.filter((e) => e.type === 'album'))
+      return evs2.length === 1 && evs2[0].title === '图鉴学徒' && evs2[0].xp === 3 && evs2[0].again === false
+    })())
+    check('图鉴扩容：旧存档没有 albumPaid 字段时，按「之前达成的都领过」迁移', E.normalizeBond({ albumGot: ['0.1', '0.3'] }).albumPaid.join(',') === '0.1,0.3')
+  }
+
   // 「新表情包」心愿
   const wish = make({ stickers: CAT, seed: seedWish('sticker') })
   check('「新表情包」心愿：看到新图就达成', wish.sticker('s3').events.some((e) => e.type === 'wish' && e.id === 'sticker'))

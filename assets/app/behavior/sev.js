@@ -34,9 +34,7 @@ export function handleSev(m) {
       perform({ id: m.active ? 'plan-on' : 'plan-off', pri: PRI.CUE, tier: 'extra', say: m.active ? 'planOn' : 'planOff', ms: 2400, cool: 3000 })
       break
     case 'compaction':
-      // 整理记忆：拿橡皮擦。开始 / 结束各一句，结束比开始轻
-      if (m.phase === 'start') perform({ id: 'compact-start', pri: PRI.CUE, tier: 'extra', props: ['橡皮'], say: 'compactStart', ms: 2600, cool: 20000 })
-      else perform({ id: 'compact-end', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'compactEnd', ms: 2200, cool: 20000 })
+      onCompaction(m.phase)
       break
     case 'goal':
       if (m.phase === 'complete') digest.goalDone = true // 收工时一起演（蛋包饭）
@@ -65,6 +63,32 @@ export function handleSev(m) {
     // v0.6.1：模型切换 / 权限 / 斜杠命令 / 智能体预设 / 定时任务（见 behavior/soul.js）
     default:
       handleSoulSev(m)
+  }
+}
+
+// ——————————————————————————————————————————————————————————————
+// 压缩 / 整理记忆：开始 → （清掉旧工具结果 / 写摘要）→ 结束；拖得久了补一句
+// ——————————————————————————————————————————————————————————————
+const COMPACT = { at: 0, timer: null }
+
+function onCompaction(phase) {
+  const now = performance.now()
+  if (phase === 'start') {
+    COMPACT.at = now
+    clearTimeout(COMPACT.timer)
+    // 整理记忆：拿橡皮擦。开始 / 结束各一句，结束比开始轻
+    perform({ id: 'compact-start', pri: PRI.CUE, tier: 'extra', props: ['橡皮'], say: 'compactStart', ms: 2600, cool: 20000 })
+    COMPACT.timer = setTimeout(() => {
+      if (COMPACT.at) perform({ id: 'compact-long', pri: PRI.CUE, tier: 'extra', mood: 'sweat', say: 'compactLong', ms: 3000, cool: 60000 })
+    }, 20000)
+  } else if (phase === 'prune' || phase === 'summary') {
+    // 刚开始那句还在说的时候不插嘴；清理 / 摘要两步共用一个冷却，免得连着刷
+    if (!COMPACT.at || now - COMPACT.at < 1800) return
+    perform({ id: 'compact-step', pri: PRI.CUE, tier: 'extra', say: phase === 'prune' ? 'compactPrune' : 'compactSummary', ms: 2400, cool: 5000 })
+  } else {
+    clearTimeout(COMPACT.timer)
+    COMPACT.at = 0
+    perform({ id: 'compact-end', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'compactEnd', ms: 2400, cool: 20000 })
   }
 }
 

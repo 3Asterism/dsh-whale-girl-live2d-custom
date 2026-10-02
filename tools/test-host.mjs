@@ -473,6 +473,15 @@ check('slim：command/run 只转命令名，不转 args（args 可能是用户�
 })())
 check('slim：agent-preset/selected / schedule/change / permission/preset', slim('agent-preset/selected', { agentPreset: 'coder' }).preset === 'coder' && slim('schedule/change', { operation: 'create' }).op === 'create' && slim('schedule/change', { operation: 'weird' }).op === null && slim('permission/preset', { preset: 'auto' }).preset === 'auto')
 
+// v0.6.7：压缩的中间步骤 / 工作流启停 / 团队动静：只转「发生了」，不转内容
+check('slim：compaction 四个阶段（start / prune / summary / end）', ['compaction/start', 'compaction/prune', 'compaction/summary', 'compaction/end'].map((t) => slim(t, {}).phase).join(',') === 'start,prune,summary,end' && slim('compaction/prune', { summary: '机密摘要' }).k === 'compaction' && !JSON.stringify(slim('compaction/summary', { text: '机密摘要' })).includes('机密'))
+check('slim：工作流启停只转启停，不转名字（名字可能带项目信息）', (() => {
+  const a = slim('tool-workflow/run-start', { runId: 'r1', name: '重构我的秘密项目' })
+  const b = slim('tool-workflow/run-end', { runId: 'r1' })
+  return a.k === 'workflow' && a.phase === 'start' && b.phase === 'end' && !JSON.stringify(a).includes('秘密')
+})())
+check('slim：团队成员 / 任务有动静都归成 team', slim('team/member', { x: 1 }).k === 'team' && slim('team/task', {}).k === 'team')
+
 const rx2 = []
 const ctl2 = new AbortController()
 const sse2 = await fetch(BASE + '/dsh-pet/events', { signal: ctl2.signal })

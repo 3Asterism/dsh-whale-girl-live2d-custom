@@ -25,12 +25,12 @@ MIT license correctly).
 
 ## 2.5 表情包 / Sticker pack
 
-- **范围 / Scope**：`assets/stickers/**`（92 张压缩后的 GIF + `manifest.json`）
+- **范围 / Scope**：`assets/stickers/**`（157 张压缩后的 GIF + `manifest.json`）
 - **版权 / Copyright**：**赤风RED**（<https://space.bilibili.com/356746604>）——「蓝色大肥鱼」系列表情包的作者
 - **许可 / License**：**不适用 MIT，也未套用 CC BY-NC-SA**；使用条款以原作者为准，本项目仅**非商业**随包分发
   / Not MIT, and not CC BY-NC-SA either; terms are the original author's. Distributed here **non-commercially** only.
-- **修改说明 / Modifications**：从原 157 张中挑选 92 张，裁掉透明空白边、缩至 96×96、25fps、63 色调色板；
-  原图不随仓库分发 / 92 of the original 157 selected, cropped, downscaled to 96×96 at 25fps with a 63-colour palette;
+- **修改说明 / Modifications**：原 157 张全部使用，裁掉透明空白边、缩至 96×96、25fps、63 色调色板（个别减色 / 一张加速）；
+  原图不随仓库分发 / all 157 of the originals used, cropped, downscaled to 96×96 at 25fps with a 63-colour palette (a few with fewer colours, one sped up);
   the originals are not redistributed. See `tools/build-stickers.py`.
 
 ## 2.6 音效 / Sound effects

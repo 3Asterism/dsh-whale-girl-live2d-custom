@@ -29,6 +29,9 @@ import { hud, hudFetch, hudPopTurnEnd, hudRender } from '../ui/hud.js'
 import { closePanels } from '../ui/panels.js'
 
 /** 收工表演 → 对应的回忆（第一次触发时记进回忆册）。 */
+/** 本来就会跑很久的工具：它们回来得慢不算「摸鱼」。 */
+const SLOW_OK_TOOLS = new Set(['ask_user_question', 'subagent', 'subagent_fork', 'workflow', 'ralph'])
+
 const FINISH_MEMORY = { 'finish-goal': 'goal', 'finish-deliver': 'selfie', 'finish-todo': 'todo-clear', 'finish-recover': 'recover' }
 
 export function connectSSE() {
@@ -272,6 +275,10 @@ export function handleEvent(m) {
         yieldTo(PRI.AMBIENT)
         putDeviceAway()
         setBase('thinking', WORK_PROPS)
+        // 一个工具跑了 30 秒以上才回来（慢工具；等人回话 / 分身 / 工作流本来就久，不算）：之前「带薪拉屎」摸鱼去了，这下回来散味
+        if (m.ms >= 30000 && !SLOW_OK_TOOLS.has(m.name)) {
+          perform({ id: 'long-tool-done', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'longToolDone', ms: 3000, cool: 60000 })
+        }
       }
       break
     }
@@ -340,7 +347,7 @@ export function handleEvent(m) {
         // 所以先只做表情+装饰的庆祝，文字留在气泡里；过两秒多再把结束台词接上。
         const keepText = R.ui.bubble.visible && !!agent.lastText
         // 一轮只演一个收工表演：目标达成 > 交付物 > 失败后终于过了 > 清单全完 > 重活 > 默认
-        const flavor = finishFlavor(m.ms)
+        const flavor = finishFlavor(m.ms, m.tokens)
         if (flavor && FINISH_MEMORY[flavor.id]) bondMemory(FINISH_MEMORY[flavor.id])
         const statText = stat.join(' · ')
         if (flavor && flavor.action) {
@@ -372,7 +379,8 @@ export function handleEvent(m) {
             // 这 2.8 秒里如果主人已经点了别的（讲故事、投喂、戳她……），别把人家的气泡顶掉
             const cur = performingNow()
             if (R.ui.bubble.asking || (cur && cur.pri > PRI.FINISH)) return
-            R.ui.bubble.show(tail, { name: '鲸鱼娘', ttl: 4200 })
+            // 收工台词接在后面时也要配图（以前这一句没带选图线索，收工表情包就出不来）
+            R.ui.bubble.show(tail, { name: '鲸鱼娘', ttl: 4200, stickerHint: { say: flavor && flavor.say, id: flavor && flavor.id, mood: 'happy' } })
           }, 2800)
         }
         onTurnFinished(m)
@@ -430,6 +438,14 @@ export function handleEvent(m) {
 
     case 'sev':
       handleSev(m)
+      break
+
+    case 'title':
+      // 会话起好名字了（标题内容不进台词）：等收工的动静过去、她闲下来再轻轻提一句，只有话痨档
+      setTimeout(() => {
+        if (agent.status !== 'idle' || performingNow() || R.ui.bubble.visible) return
+        perform({ id: 'title-set', pri: PRI.CUE, tier: 'chatty', mood: 'happy', say: 'titleSet', ms: 2400, cool: 120000 })
+      }, 4500)
       break
 
     case 'session':

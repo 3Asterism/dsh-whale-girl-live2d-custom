@@ -124,6 +124,11 @@ export async function routineTick() {
     if (low && !ROUTINE.lastLowBalance) {
       ROUTINE.lastLowBalance = true
       if (await slot('lowbal', { say: 'lowBalance', mood: 'dead' })) return
-    } else if (!low) ROUTINE.lastLowBalance = false
+    } else if (!low) {
+      // 余额从「见底」回来了（充值了）：复活节——抱着彩蛋复活，每天最多一次
+      const wasLow = ROUTINE.lastLowBalance
+      ROUTINE.lastLowBalance = false
+      if (wasLow && (await slot('balback', { say: 'balanceBack', mood: 'excited', heart: true }))) return
+    }
   }
 }

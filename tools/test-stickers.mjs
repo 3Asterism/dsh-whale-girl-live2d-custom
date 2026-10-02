@@ -30,6 +30,9 @@ function check(name, ok, detail) {
 const pickMod = await imp('ui/sticker-pick.js')
 const data = await imp('persona/stickers.js')
 const { SOUL_LINES } = await imp('persona/lines-soul.js')
+const { SCENE_LINES, MAMA_EXTRA } = await imp('persona/lines-scenes.js')
+const { KEYWORDS } = await imp('persona/keywords.js')
+const { lineFor } = await imp('persona/lines.js')
 const { BOND_LINES } = await imp('persona/lines-bond.js')
 const { SAY } = await imp('persona/say.js')
 
@@ -41,15 +44,15 @@ console.log('\n表情包 · 数据完整性\n')
 const ids = Object.keys(manifest)
 const gifs = fs.readdirSync(STK).filter((f) => f.endsWith('.gif'))
 check('清单里每张都有对应的 .gif 文件，且没有多余的 .gif', ids.every((i) => fs.existsSync(path.join(STK, manifest[i].file))) && gifs.length === ids.length, `${ids.length} 张`)
-check('入选清单（curation）里的 id 都在清单里（单圈过长被剔除的除外，最多 3 张）', curation.filter((c) => !manifest[c.id]).length <= 3, curation.filter((c) => !manifest[c.id]).map((c) => c.id).join(',') || '全部入选')
+check('入选清单（curation）里的 id 全部压进了清单（原图 157 张一张不落）', curation.filter((c) => !manifest[c.id]).length === 0 && curation.length === 157, curation.filter((c) => !manifest[c.id]).map((c) => c.id).join(',') || `${curation.length} 张全部入选`)
 const sizes = ids.map((i) => fs.statSync(path.join(STK, manifest[i].file)).size)
 const total = sizes.reduce((a, b) => a + b, 0)
 check('单张 ≤ 210KB', Math.max(...sizes) <= 210 * 1024, `最大 ${Math.round(Math.max(...sizes) / 1024)}KB`)
-check('总计 ≤ 12MB（压缩后；原图 460MB）', total <= 12 * 1048576, `${(total / 1048576).toFixed(2)}MB`)
-check('每张是 GIF 文件头、96×96、一圈时长 100–2600ms', ids.every((i) => {
+check('总计 ≤ 24MB（压缩后；原图 460MB）', total <= 24 * 1048576, `${(total / 1048576).toFixed(2)}MB`)
+check('每张是 GIF 文件头、96×96、一圈时长 100–2700ms', ids.every((i) => {
   const b = fs.readFileSync(path.join(STK, manifest[i].file))
   const m = manifest[i]
-  return b.slice(0, 3).toString() === 'GIF' && b.readUInt16LE(6) === 96 && b.readUInt16LE(8) === 96 && m.ms >= 100 && m.ms <= 2600
+  return b.slice(0, 3).toString() === 'GIF' && b.readUInt16LE(6) === 96 && b.readUInt16LE(8) === 96 && m.ms >= 100 && m.ms <= 2700
 }))
 check('清单里每张都写了「梗」说明和中文名（图鉴里显示）', ids.every((i) => typeof manifest[i].meme === 'string' && manifest[i].meme.length > 1 && typeof manifest[i].name === 'string' && manifest[i].name))
 
@@ -61,6 +64,7 @@ for (const [k, pool] of Object.entries(data.MOOD_STICKER)) ref('mood:' + k, pool
 for (const [k, pool] of Object.entries(data.EVENT_STICKER)) ref('event:' + k, pool)
 for (const [, pool] of data.ACTION_STICKER) ref('action', pool)
 for (const [k, pool] of Object.entries(data.TOOL_STICKER)) ref('tool:' + k, pool)
+for (const [k, pool] of Object.entries(data.SOLO_STICKER)) ref('solo:' + k, pool)
 ref('fallback', data.FALLBACK_STICKER)
 ref('minLevel', Object.keys(data.MIN_LEVEL))
 ref('start', data.START_STICKER)
@@ -71,16 +75,41 @@ check('所有池里引用的表情包都真实存在', dangling.length === 0, da
 // 台词 id 全覆盖：核心台词在 lines.js 里没有导出，直接从源码里抠 id
 const coreSrc = fs.readFileSync(path.join(APP, 'persona', 'lines.js'), 'utf8')
 const coreIds = [...coreSrc.matchAll(/^  ([A-Za-z0-9_]+): [\[{]/gm)].map((m) => m[1])
-const lineIds = new Set([...coreIds, ...Object.keys(BOND_LINES), ...Object.keys(SOUL_LINES)])
+const lineIds = new Set([...coreIds, ...Object.keys(BOND_LINES), ...Object.keys(SOUL_LINES), ...Object.keys(SCENE_LINES)])
 const NO_STICKER = new Set([]) // 实在没法适配的才写进来，并在这里写明原因
 const unmapped = [...lineIds].filter((k) => !data.EVENT_STICKER[k] && !NO_STICKER.has(k))
 check(`每个台词 id 都配了表情包（共 ${lineIds.size} 个）`, unmapped.length === 0, unmapped.join(', ') || '全部覆盖')
 check('主要的直接传台词的表演也配了（待机碎碎念 / 醒来 / 收拾桌面 / 被打断 / 工具报错）', ['idle-mutter', 'wake', 'menu-tidy', 'finish-abort', 'tool-error'].every((k) => data.EVENT_STICKER[k]))
 
 // 铁律：台词里不出现第三方模型品牌 / 不叫「鱼片」
-const allLines = [...Object.values(SOUL_LINES).flat(), ...Object.values(SAY).flat()].filter((x) => typeof x === 'string')
+const allLines = [...Object.values(SOUL_LINES).flat(), ...Object.values(SCENE_LINES).flat(), ...Object.values(MAMA_EXTRA).flat(), ...Object.values(SAY).flat()].filter((x) => typeof x === 'string')
 check('新台词不提第三方模型品牌、不叫「鱼片」', !allLines.some((s) => /GLM|Kimi|Qwen|GPT|Claude|Gemini|智谱|鱼片/i.test(s)))
-check('新台词每条 ≤ 28 字、至多一个全角括号动作', Object.values(SOUL_LINES).flat().every((s) => s.length <= 28 && (s.match(/（/g) || []).length <= 1), Object.values(SOUL_LINES).flat().filter((s) => s.length > 28 || (s.match(/（/g) || []).length > 1).join(' | '))
+const newLines = [...Object.values(SOUL_LINES).flat(), ...Object.values(SCENE_LINES).flat(), ...Object.values(MAMA_EXTRA).flat()]
+check('新台词每条 ≤ 28 字、至多一个全角括号动作', newLines.every((s) => s.length <= 28 && (s.match(/（/g) || []).length <= 1), newLines.filter((s) => s.length > 28 || (s.match(/（/g) || []).length > 1).join(' | '))
+
+// —— v0.6.7：157 张全用上、单发图池、反差萌、妈妈梗 ——
+console.log('\n表情包 · 全量使用与新场景\n')
+const usedIds = new Set([...allRefs.values()].map((r) => r.id))
+const unused = ids.filter((i) => !usedIds.has(i))
+check(`原图 157 张每一张都挂在了至少一个池子里（不浪费素材；共 ${ids.length} 张）`, unused.length === 0, unused.join(', ') || '全部有用武之地')
+check('单发图池（SOLO_STICKER）里的图都存在，且待机池够丰富（≥15 张）', Object.values(data.SOLO_STICKER).flat().every((i) => manifest[i]) && data.SOLO_STICKER.idle.length >= 15)
+check('没操作一阵子 = 单发「打游戏」', JSON.stringify(data.SOLO_STICKER.idleGame) === JSON.stringify(['game']))
+const fatPool = data.EVENT_STICKER.kwFat
+check('反差萌：被叫胖，她嘴上不认，「肥鱼」便利贴照样蹦出来（池里一半以上是 fatnote）', fatPool.filter((i) => /^fatnote/.test(i)).length * 2 > fatPool.length)
+check('「肥鱼」贴纸不再回避：fatnote1/2/3 都入了清单', ['fatnote1', 'fatnote2', 'fatnote3'].every((i) => manifest[i]))
+const kwSay = KEYWORDS.map((k) => k.say)
+check('每条关键词的台词 id 都有台词、也都配了图', kwSay.every((s) => lineFor(s) && data.EVENT_STICKER[s]), kwSay.filter((s) => !lineFor(s) || !data.EVENT_STICKER[s]).join(','))
+const kwHit = (s) => (KEYWORDS.find((k) => k.re.test(s)) || {}).id
+check('关键词：能成为我母亲的女性 / 妈妈味 / 奶妈 / ママ 各归各的梗，叫妈妈走 kw-mama', kwHit('xx是能成为我母亲的女性') === 'kw-mother' && kwHit('你有点妈妈味') === 'kw-baby' && kwHit('奶妈快来') === 'kw-healer' && kwHit('ママ～') === 'kw-mama' && kwHit('叫你妈妈') === 'kw-mama')
+check('关键词：单独的「67」是梗，「67 个文件」不是；bug / 六七 / 摸鱼 / 涨价 都认', kwHit('67') === 'kw-67' && kwHit('六七') === 'kw-67' && kwHit('我有67个文件') == null && kwHit('这个 bug 怎么修') === 'kw-bug' && kwHit('prefix 不对') == null && kwHit('在摸鱼') === 'kw-slack' && kwHit('又涨价了') === 'kw-price')
+check('「妈妈」梗补进了关心类台词池（kwTired / sleepy1 / lunch 都带了）', ['kwTired', 'sleepy1', 'lunch', 'kwMama'].every((k) => (MAMA_EXTRA[k] || []).length > 0))
+check('压缩全流程都有台词和图（开始 / 清理 / 摘要 / 久了 / 结束）', ['compactStart', 'compactPrune', 'compactSummary', 'compactLong', 'compactEnd'].every((s) => lineFor(s) && data.EVENT_STICKER[s]))
+const { PAGE_ACTIONS, PAGE_INTENTS } = await imp('persona/page-actions.js')
+const intentSay = (k) => (PAGE_INTENTS[k] && PAGE_INTENTS[k].say) || k
+check('界面动作：每个识别规则都有对应的演法，且台词 id 真有台词、也配了图（key 与台词 id 不一致时要写 say，漏了就只演脸不说话）', PAGE_ACTIONS.every(([k]) => PAGE_INTENTS[k]) && PAGE_ACTIONS.every(([k]) => lineFor(intentSay(k)) && data.EVENT_STICKER[intentSay(k)]), PAGE_ACTIONS.filter(([k]) => !PAGE_INTENTS[k] || !lineFor(intentSay(k)) || !data.EVENT_STICKER[intentSay(k)]).map(([k]) => k).join(','))
+const pa = (label) => (PAGE_ACTIONS.find(([, re]) => re.test(label)) || [])[0]
+check('界面动作：压缩 / 附件 / 分叉 等中英标签认得出，普通文字不乱认', pa('压缩上下文') === 'compactBtn' && pa('Compact') === 'compactBtn' && pa('Attach file') === 'attach' && pa('分叉') === 'fork' && pa('撤销') === 'undo' && pa('随便一句话') == null)
+check('括号动作词新增：打游戏 / 催眠 / 喷剂 / 吉他 / 胶带 / 电风扇 / 撬棍', [['（打游戏）', 'game'], ['（甩怀表）', 'hypno'], ['（挥喷剂）', 'spray'], ['（拿起吉他）', 'guitar'], ['（贴上胶带）', 'tape'], ['（对着电风扇）', 'fan1'], ['（撬）', 'crowbar1']].every(([p, id]) => { const hit = data.ACTION_STICKER.find(([re]) => re.test(p)); return hit && hit[1].includes(id) }))
 
 console.log('\n表情包 · 选图与时长规则\n')
 const { SNAP_MS, REPEAT_MS, snapExtra, soloTtl, stickyMs, chooseFrom, pickSticker, resolvePools } = pickMod

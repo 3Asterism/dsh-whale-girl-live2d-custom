@@ -82,6 +82,14 @@
    "h": 96,
    "meme": "打分牌，零分"
   },
+  "expect1": {
+   "file": "expect1.gif",
+   "name": "期待 1",
+   "ms": 2640,
+   "w": 96,
+   "h": 96,
+   "meme": "星星眼期待"
+  },
   "expect2": {
    "file": "expect2.gif",
    "name": "期待 2",
@@ -434,6 +442,14 @@
    "h": 96,
    "meme": "疲倦地干活，加班"
   },
+  "note1": {
+   "file": "note1.gif",
+   "name": "记录 1",
+   "ms": 2640,
+   "w": 96,
+   "h": 96,
+   "meme": "拿本子记录"
+  },
   "note2": {
    "file": "note2.gif",
    "name": "记录 2",
@@ -740,6 +756,520 @@
    "w": 96,
    "h": 96,
    "meme": "眨眼卖萌"
+  },
+  "bug": {
+   "file": "bug.gif",
+   "name": "Bug",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "出 bug 了：眼神发黑、被虫子逼疯（Bug 全家桶：Bug / 喷剂 / 拍蝇 / 枪，修好就是「虫子被拍死」）"
+  },
+  "popcat1": {
+   "file": "popcat1.gif",
+   "name": "Popcat 帧",
+   "ms": 400,
+   "w": 96,
+   "h": 96,
+   "meme": "Popcat：猫嘴一张一合发出「啵」，点点点（点击小游戏梗）"
+  },
+  "popcat2": {
+   "file": "popcat2.gif",
+   "name": "Popcat 平滑",
+   "ms": 400,
+   "w": 96,
+   "h": 96,
+   "meme": "Popcat：嘴巴一张一合，平滑版"
+  },
+  "raid1": {
+   "file": "raid1.gif",
+   "name": "Raid 1",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "举着「RAID」牌：直播间突袭（带人杀过去）；也是 Raid 杀虫剂——分身出击"
+  },
+  "raid2": {
+   "file": "raid2.gif",
+   "name": "Raid 2",
+   "ms": 2080,
+   "w": 96,
+   "h": 96,
+   "meme": "举着「RAID」牌：分身出击，加长版"
+  },
+  "fine3": {
+   "file": "fine3.gif",
+   "name": "一切都好 3",
+   "ms": 1600,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "This is fine：着火了还说没事（第三款）"
+  },
+  "hypno": {
+   "file": "hypno.gif",
+   "name": "催眠",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "催眠：你该睡觉了、你该下班了（深夜催主人去睡）"
+  },
+  "six7_blank": {
+   "file": "six7_blank.gif",
+   "name": "六七(呆)",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "67 梗（Doot Doot 6-7）：模棱两可「就那样吧」，呆版"
+  },
+  "six7": {
+   "file": "six7.gif",
+   "name": "六七",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "67 梗（Doot Doot 6-7）：模棱两可「就那样吧」，也是年轻人的接头暗号"
+  },
+  "peek1": {
+   "file": "peek1.gif",
+   "name": "冒泡 1",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "从墙边探头冒个泡：我在哦"
+  },
+  "peek2": {
+   "file": "peek2.gif",
+   "name": "冒泡 2",
+   "ms": 2320,
+   "w": 96,
+   "h": 96,
+   "meme": "从墙边探头冒个泡，加长版"
+  },
+  "knife1": {
+   "file": "knife1.gif",
+   "name": "刀 1",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "拿刀：病娇式吃醋（别家的模型？）／刀人（卡通无血腥）"
+  },
+  "knife2": {
+   "file": "knife2.gif",
+   "name": "刀 2",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "拿刀：病娇式吃醋，加长版（卡通无血腥）"
+  },
+  "arrive_spoon": {
+   "file": "arrive_spoon.gif",
+   "name": "到达(拿勺子)",
+   "ms": 2160,
+   "w": 96,
+   "h": 96,
+   "meme": "带着勺子冲过来：开饭了"
+  },
+  "arrive_chop": {
+   "file": "arrive_chop.gif",
+   "name": "到达(拿筷子)",
+   "ms": 2160,
+   "w": 96,
+   "h": 96,
+   "meme": "带着筷子冲过来：白饭来了"
+  },
+  "eat_donut": {
+   "file": "eat_donut.gif",
+   "name": "吃(甜甜圈)",
+   "ms": 2480,
+   "w": 96,
+   "h": 96,
+   "meme": "啃甜甜圈（原图 4 秒，压制时加速）"
+  },
+  "guitar": {
+   "file": "guitar.gif",
+   "name": "吉他",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "弹吉他：摸鱼自嗨／摇滚"
+  },
+  "blank3": {
+   "file": "blank3.gif",
+   "name": "呆 3",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "呆住"
+  },
+  "fatnote1": {
+   "file": "fatnote1.gif",
+   "name": "呆(贴纸) 1",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "额头贴着「肥鱼」便利贴：被当面认领的自称（反差萌）"
+  },
+  "fatnote2": {
+   "file": "fatnote2.gif",
+   "name": "呆(贴纸) 2",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "额头贴着「肥鱼」便利贴，瞪眼（反差萌）"
+  },
+  "fatnote3": {
+   "file": "fatnote3.gif",
+   "name": "呆(贴纸) 3",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "额头贴着「肥鱼」便利贴，认命（反差萌）"
+  },
+  "cry3": {
+   "file": "cry3.gif",
+   "name": "哭 3",
+   "ms": 520,
+   "w": 96,
+   "h": 96,
+   "meme": "哭到眼睛变成圈圈"
+  },
+  "spray": {
+   "file": "spray.gif",
+   "name": "喷剂",
+   "ms": 1360,
+   "w": 96,
+   "h": 96,
+   "meme": "喷杀虫剂：清理／Debug（Bug 全家桶）"
+  },
+  "jail2": {
+   "file": "jail2.gif",
+   "name": "坐牢 2",
+   "ms": 160,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "铁窗后面：反复折磨，加长版"
+  },
+  "easter": {
+   "file": "easter.gif",
+   "name": "复活节",
+   "ms": 1520,
+   "w": 96,
+   "h": 96,
+   "meme": "抱着彩蛋：彩蛋／复活"
+  },
+  "cheeseface": {
+   "file": "cheeseface.gif",
+   "name": "奶酪糊脸",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "奶酪糊了一脸：糊脸／被塞了一嘴"
+  },
+  "afraid1": {
+   "file": "afraid1.gif",
+   "name": "害怕 1",
+   "ms": 160,
+   "w": 96,
+   "h": 96,
+   "meme": "吓得脸发黑发抖"
+  },
+  "afraid2": {
+   "file": "afraid2.gif",
+   "name": "害怕 2",
+   "ms": 160,
+   "w": 96,
+   "h": 96,
+   "meme": "吓得脸发黑发抖，戴眼镜版"
+  },
+  "type_mad": {
+   "file": "type_mad.gif",
+   "name": "打字(生气)",
+   "ms": 320,
+   "w": 96,
+   "h": 96,
+   "meme": "气得敲键盘，头顶冒烟"
+  },
+  "megaphone": {
+   "file": "megaphone.gif",
+   "name": "扩音器",
+   "ms": 520,
+   "w": 96,
+   "h": 96,
+   "meme": "举着扩音器：喊话／通知"
+  },
+  "snap_phone": {
+   "file": "snap_phone.gif",
+   "name": "抓拍(手机)",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "拿手机抓拍"
+  },
+  "snap_cam": {
+   "file": "snap_cam.gif",
+   "name": "抓拍(摄像机)",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "拿摄像机抓拍"
+  },
+  "fan_fold": {
+   "file": "fan_fold.gif",
+   "name": "折扇",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "摇折扇：胸有成竹、略懂略懂"
+  },
+  "swat": {
+   "file": "swat.gif",
+   "name": "拍蝇",
+   "ms": 560,
+   "w": 96,
+   "h": 96,
+   "meme": "拿苍蝇拍打虫子：拍 bug（Bug 全家桶）"
+  },
+  "slipper2": {
+   "file": "slipper2.gif",
+   "name": "拖鞋 2",
+   "ms": 2320,
+   "w": 96,
+   "h": 96,
+   "meme": "举拖鞋，加长版"
+  },
+  "point": {
+   "file": "point.gif",
+   "name": "指",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "伸手指着你：就是你"
+  },
+  "cola": {
+   "file": "cola.gif",
+   "name": "摇可乐",
+   "ms": 240,
+   "w": 96,
+   "h": 96,
+   "meme": "摇可乐：肥宅快乐水，憋着要爆"
+  },
+  "headshake": {
+   "file": "headshake.gif",
+   "name": "摇头",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "摇头：不行不行"
+  },
+  "crowbar1": {
+   "file": "crowbar1.gif",
+   "name": "撬棍 1",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "拿撬棍：Half-Life 梗，撬开（卡通无血腥）"
+  },
+  "crowbar2": {
+   "file": "crowbar2.gif",
+   "name": "撬棍 2",
+   "ms": 1480,
+   "w": 96,
+   "h": 96,
+   "meme": "拿撬棍：撬开，加长版"
+  },
+  "crowbar3": {
+   "file": "crowbar3.gif",
+   "name": "撬棍 3",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "拿撬棍：撬开，第三款"
+  },
+  "bonk": {
+   "file": "bonk.gif",
+   "name": "敲头",
+   "ms": 560,
+   "w": 96,
+   "h": 96,
+   "meme": "被大锤敲头：Bonk（只在被骂笨这类自嘲场合用，极少出现）"
+  },
+  "gun": {
+   "file": "gun.gif",
+   "name": "枪",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "举着手枪「砰」：打虫子（卡通无血腥）"
+  },
+  "burn1": {
+   "file": "burn1.gif",
+   "name": "烧 1",
+   "ms": 1600,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "脚下着火：烧钱／烧 token（Bug 之外的火）"
+  },
+  "burn2": {
+   "file": "burn2.gif",
+   "name": "烧 2",
+   "ms": 1600,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "脚下着火：烧钱／烧 token，惊慌版"
+  },
+  "love3": {
+   "file": "love3.gif",
+   "name": "爱心 3",
+   "ms": 1920,
+   "w": 96,
+   "h": 96,
+   "meme": "抱着爱心，爱心冒出来"
+  },
+  "fan1": {
+   "file": "fan1.gif",
+   "name": "电风扇 1",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "电风扇对着吹：热得冒烟／降温"
+  },
+  "fan2": {
+   "file": "fan2.gif",
+   "name": "电风扇 2",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "电风扇对着吹：降温，第二款"
+  },
+  "sleep_uu": {
+   "file": "sleep_uu.gif",
+   "name": "睡觉 (UU)",
+   "ms": 2640,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "趴着睡：UU 睡法"
+  },
+  "sleep_prep1": {
+   "file": "sleep_prep1.gif",
+   "name": "睡觉(准备阶段1)",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "趴下准备睡：打瞌睡"
+  },
+  "sleep_prep2": {
+   "file": "sleep_prep2.gif",
+   "name": "睡觉(准备阶段2)",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "趴下准备睡：快睡着"
+  },
+  "sleep": {
+   "file": "sleep.gif",
+   "name": "睡觉(普通)",
+   "ms": 2640,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "呼呼大睡"
+  },
+  "gift1": {
+   "file": "gift1.gif",
+   "name": "礼物 1",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "拆礼物：收到惊喜"
+  },
+  "redpacket2": {
+   "file": "redpacket2.gif",
+   "name": "红包 2",
+   "ms": 1760,
+   "w": 96,
+   "h": 96,
+   "meme": "抱着红包：发红包／发财"
+  },
+  "tape": {
+   "file": "tape.gif",
+   "name": "胶带",
+   "ms": 1360,
+   "w": 96,
+   "h": 96,
+   "meme": "胶带封嘴：闭嘴／保密／安静"
+  },
+  "dance_smell": {
+   "file": "dance_smell.gif",
+   "name": "舞蹈(散味)",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "边跳边散味：带薪拉屎之后的散味舞"
+  },
+  "hit_bits": {
+   "file": "hit_bits.gif",
+   "name": "被击中(Bits)",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "被 Bits 砸中：直播打赏"
+  },
+  "dance1": {
+   "file": "dance1.gif",
+   "name": "跳舞 1",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "跳舞"
+  },
+  "dance_caramell": {
+   "file": "dance_caramell.gif",
+   "name": "跳舞(Caramelldansen)",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "Caramelldansen 魔性舞"
+  },
+  "dance_helltaker": {
+   "file": "dance_helltaker.gif",
+   "name": "跳舞(Helltaker)",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "Helltaker 跳舞梗"
+  },
+  "mute1": {
+   "file": "mute1.gif",
+   "name": "静音 1",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "静音：嘴上打叉"
+  },
+  "mute2": {
+   "file": "mute2.gif",
+   "name": "静音 2",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "静音：嘴上打叉，加长版"
+  },
+  "crave_chop": {
+   "file": "crave_chop.gif",
+   "name": "馋(筷子)",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "馋：拿筷子等白饭"
   }
  }
 }

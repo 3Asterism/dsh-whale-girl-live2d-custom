@@ -126,6 +126,11 @@ window.DSHPet = {
     routine: () => routineTick(), // 测日常节律（心愿提一句 / 每周回顾）：手动跑一次
     lowBalance: () => checkLowBalance(), // 测「余额不足要米」：按当前 hud.data 判断一次
     idleTick: (ctx) => soulTick(ctx), // 测发呆搭话：手动喂一个 { typing, sleeping }
+    // 测「没操作 N 毫秒」：把主人最近一次动键鼠 / agent 最近一次活动拨到 ms 毫秒以前（静置阶梯 / 待机单发图都读它们）
+    stillFor: (ms) => {
+      SOUL.lastInput = Date.now() - ms
+      agent.lastActivity = Date.now() - ms
+    },
     soul: () => JSON.parse(JSON.stringify(SOUL, (k, v) => (k === 'timers' || k === 'timer' ? undefined : v))),
   },
   /** 诊断用：直接喂一条宿主事件（跟 SSE 推来的一样），撞车测试 / 预览服务器用。 */

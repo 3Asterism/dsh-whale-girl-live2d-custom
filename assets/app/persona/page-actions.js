@@ -21,9 +21,23 @@ export const PAGE_ACTIONS = [
   ['regen', /^(重新生成|重试|regenerate|retry)$/i],
   ['modelSwitch', /^(模型|切换模型|model|switch model)$/i],
   ['deleteSession', /^(删除会话|删除|归档会话|归档|delete session|delete|archive session|archive)$/i],
+  // v0.6.7：压缩上下文 + 更多界面动作。标签是中英双语的最佳猜测（拿不准真 DSH 的叫法），对不上就不触发，无副作用；
+  // 校准办法：右键菜单 / 控制台 DSHPet.page.recent() 看最近点过的标签，缺的往这里补一行。
+  ['compactBtn', /^(压缩|压缩上下文|压缩对话|整理记忆|精简上下文|compact|compact context|compress|compress context)$/i],
+  ['attach', /^(添加附件|附件|上传文件|上传|attach|attach files?|upload|add attachment)$/i],
+  ['share', /^(分享|分享会话|share|share session)$/i],
+  ['export', /^(导出|导出会话|下载|export|export session|download)$/i],
+  ['search', /^(搜索|搜索会话|search|search sessions|search chats)$/i],
+  ['voice', /^(语音|语音输入|voice|voice input|microphone|dictate)$/i],
+  ['pin', /^(置顶|固定|取消置顶|pin|unpin)$/i],
+  ['rename', /^(重命名|rename)$/i],
+  ['fork', /^(分叉|分支|创建分支|fork|branch|fork session)$/i],
+  ['undo', /^(撤销|撤回|undo)$/i],
+  ['edit', /^(编辑|编辑消息|edit|edit message)$/i],
+  ['help', /^(帮助|help)$/i],
 ]
 
-/** 每个界面动作怎么演。tier：extra = 普通档起；chatty = 只有话痨档（频繁且意义轻的）。 */
+/** 每个界面动作怎么演。台词 id 默认等于 key；不等的（page 开头的新动作）要显式写 say。tier：extra = 普通档起；chatty = 只有话痨档（频繁且意义轻的）。 */
 export const PAGE_INTENTS = {
   newSession: { tier: 'extra', mood: 'excited', ms: 2200, cool: 2500 },
   switchSession: { tier: 'extra', ms: 1800, cool: 2500 },
@@ -40,4 +54,17 @@ export const PAGE_INTENTS = {
   sidebarOpen: { tier: 'chatty', ms: 1600, cool: 3000 },
   sidebarClose: { tier: 'chatty', ms: 1600, cool: 3000 },
   copy: { tier: 'chatty', ms: 1600, cool: 4000 },
+  // 点「压缩」：和宿主的 compaction/start 共用同一个表演 id（冷却 20 秒），点击是即时反馈、事件是兜底，谁先到谁演
+  compactBtn: { id: 'compact-start', say: 'compactStart', props: ['橡皮'], tier: 'extra', ms: 2600, cool: 20000 },
+  attach: { say: 'pageAttach', tier: 'extra', mood: 'excited', ms: 2000, cool: 6000 },
+  share: { say: 'pageShare', tier: 'extra', mood: 'happy', ms: 2000, cool: 6000 },
+  export: { say: 'pageExport', tier: 'extra', mood: 'happy', ms: 2000, cool: 6000 },
+  fork: { say: 'pageFork', tier: 'extra', mood: 'alert', ms: 2200, cool: 6000 },
+  undo: { say: 'pageUndo', tier: 'extra', mood: 'sweat', ms: 2000, cool: 6000 },
+  search: { say: 'pageSearch', tier: 'chatty', ms: 1800, cool: 8000 },
+  voice: { say: 'pageVoice', tier: 'chatty', ms: 1800, cool: 8000 },
+  pin: { say: 'pagePin', tier: 'chatty', ms: 1800, cool: 8000 },
+  rename: { say: 'pageRename', tier: 'chatty', ms: 1800, cool: 8000 },
+  edit: { say: 'pageEdit', tier: 'chatty', ms: 1800, cool: 8000 },
+  help: { say: 'pageHelp', tier: 'chatty', mood: 'confused', ms: 2000, cool: 8000 },
 }

@@ -7,6 +7,7 @@ import { playOneShot, stopActing } from '../engine/motion.js'
 import { setReaction } from '../engine/rig.js'
 import { PERF } from '../engine/runtime.js'
 import { lineFor } from '../persona/lines.js'
+import { SOLO_STICKER } from '../persona/stickers.js'
 
 /**
  * 起一次表演。**所有一次性反应都必须走这里，没有例外。**
@@ -35,6 +36,10 @@ function rawAct(spec) {
   if (spec.line) R.ui.bubble.show(spec.line, { name: '鲸鱼娘', ttl: spec.lineMs || Math.max(ms, 1800), stickerHint: hint })
   else if (spec.sticker && typeof spec.sticker === 'string' && !(agent.hasStream && (spec.pri || 0) < PRI.ALERT)) {
     R.ui.bubble.sticker(spec.sticker, { maxMs: spec.stickerMs })
+  } else if (spec.solo && !(agent.hasStream && (spec.pri || 0) < PRI.ALERT)) {
+    // 单发图（没有台词）：solo = 池名（persona/stickers.js 的 SOLO_STICKER）或一个 id 数组，从池里按「近期没用过」挑一张
+    const pool = Array.isArray(spec.solo) ? spec.solo : SOLO_STICKER[spec.solo]
+    if (pool) R.ui.bubble.soloFrom(pool, { maxMs: spec.stickerMs })
   }
   if (spec.motion) {
     playOneShot(spec.motion)

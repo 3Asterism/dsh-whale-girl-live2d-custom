@@ -41,7 +41,7 @@
 |---|---|
 | `assets/model/c_0120.moc3`、`c_0120.2048/texture_*.png`、`c_0120.physics3.json`、`c_0120.cdi3.json`、`motions/*.motion3.json`、`expressions/*.exp3.json` | 来自工作区 `DS鲸鱼娘/DS鼠控版.zip`（VTube Studio 模型包，原作者 B 站 **@氵六青**，UID 11272072） |
 | `assets/model/c_0120.model3.json`、`assets/model/manifest.json` | **本项目生成**（`tools/build-model.mjs`）。原包没有 `model3.json`（VTube Studio 直接按文件名加载动作），这里把 8 个动作注册成标准 motion group，并抽出一份表情参数清单 |
-| `assets/stickers/*.gif`、`assets/stickers/manifest.json` | 由 `tools/build-stickers.py` 从赤风RED的「蓝色大肥鱼」表情包（157 张，500×500）**挑选并压缩**生成：92 张，裁透明边、缩至 96×96、25fps、63 色；`manifest.json` 里的一圈时长在构建期测定。入选清单与每张图的梗见 `tools/stickers.curation.json` |
+| `assets/stickers/*.gif`、`assets/stickers/manifest.json` | 由 `tools/build-stickers.py` 从赤风RED的「蓝色大肥鱼」表情包（157 张，500×500）**压缩**生成：157 张（全部），裁透明边、缩至 96×96、25fps、63 色；`manifest.json` 里的一圈时长在构建期测定。入选清单与每张图的梗见 `tools/stickers.curation.json` |
 | `assets/sound/duck-press.mp3`、`duck-release.mp3` | 取自 dsh-whale-widget（<https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget>）包内 `assets/Ya1.mp3`、`assets/Ya2.mp3`，字节原样（SHA-1 `3b96291d…` / `473a5312…`），仅改名。开源素材，原始出处待补 |
 | `assets/vendor/live2dcubismcore.min.js` | 取自 Live2D 官方 CDN `https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js` |
 | `assets/vendor/pixi.min.js` | npm `pixi.js@6.5.10` 的 `dist/browser/pixi.min.js` |

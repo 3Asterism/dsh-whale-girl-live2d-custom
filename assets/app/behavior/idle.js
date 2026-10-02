@@ -2,7 +2,7 @@
 
 import { TYPING } from './page.js'
 import { routineTick } from './routine.js'
-import { soulTick } from './soul.js'
+import { SOUL, soulTick } from './soul.js'
 import { CFG } from '../config.js'
 import { EXPR, R, agent, bond } from '../core/state.js'
 import { pick, pickFresh } from '../core/util.js'
@@ -13,6 +13,7 @@ import { PERF } from '../engine/runtime.js'
 import { workTick } from '../engine/work.js'
 import { IDLE_PROPS, PROPS } from '../persona/items.js'
 import { lineFor } from '../persona/lines.js'
+import { SOLO_STICKER } from '../persona/stickers.js'
 import { SAY } from '../persona/say.js'
 import { bondRefresh } from './bond.js'
 
@@ -43,6 +44,7 @@ const IDLE_TABLE = [
   ['mutter', 22], // 自言自语（人设台词）
   ['hungry', 4], // 喊饿
   ['nopang', 2], // 强调自己不胖（主人说「别老生气」，权重砍半）
+  ['solo', 12], // 主人一阵子没动静：单发一张「她在做什么」的表情包（打游戏 / 弹吉他 / 跳舞…），不带台词
 ]
 
 export const idle = { sleep: 0, nextAt: 0, expressTimer: null, propTimer: null }
@@ -74,6 +76,19 @@ export function wakeUp() {
   idle.sleep = 0
   agent.lastActivity = Date.now()
   perform({ id: 'wake', pri: PRI.TOUCH, tier: 'core', habit: false, mood: 'alert', line: pick(SAY.wake), ms: 1800 })
+}
+
+/** 单发图按「现在是什么时候、她心情如何」选池：深夜犯困、饭点馋、心情好跳舞、低落发呆。 */
+function idleSoloPool() {
+  const d = new Date()
+  const h = d.getHours()
+  const m = h * 60 + d.getMinutes()
+  const s = bondMood()
+  if (h >= 23 || h < 5) return 'idleNight'
+  if ((m >= 700 && m < 780) || (m >= 1070 && m < 1140)) return 'idleMeal'
+  if (s && s.mood.v >= 80) return 'idleHappy'
+  if (s && s.mood.v <= 30) return 'idleBlue'
+  return 'idle'
 }
 
 function pickIdleBehavior() {
@@ -144,6 +159,11 @@ function runIdleBehavior() {
       perform({ id: 'idle-hungry', pri: PRI.AMBIENT, tier: 'extra', habit: false, mood: 'pout', props: IDLE_PROPS, line, ms: 4600 })
       break
     }
+    case 'solo':
+      // 「没操作」的意思是主人 40 秒内没动过键鼠、agent 也没在干活；气泡里有话的时候不插图
+      if (Date.now() - Math.max(SOUL.lastInput, agent.lastActivity) < 40000 || CFG.idleChat === false || R.ui.bubble.visible) break
+      perform({ id: 'idle-solo', pri: PRI.AMBIENT, tier: 'extra', habit: false, props: IDLE_PROPS, solo: idleSoloPool(), ms: 2600, cool: 45000 })
+      break
     case 'nopang':
       perform({ id: 'idle-nopang', pri: PRI.AMBIENT, tier: 'extra', habit: false, mood: 'grumpy', props: IDLE_PROPS, line: pickFresh(SAY.fat, 'fat'), ms: 4200 })
       break
@@ -197,7 +217,7 @@ export function startLoops() {
     if (idle.sleep === 0 && quiet > CFG.sleepAfterMs) {
       idle.sleep = 2
       setBase('sleepy', IDLE_PROPS)
-      R.ui.bubble.show(pick(['呼……呼……', '（打瞌睡）', '（趴桌上睡着了）']), { name: '鲸鱼娘', ttl: 9000, sticker: 'work_nap' })
+      R.ui.bubble.show(pick(['呼……呼……', '（打瞌睡）', '（趴桌上睡着了）']), { name: '鲸鱼娘', ttl: 9000, sticker: pick(SOLO_STICKER.idleSleep) })
     } else if (idle.sleep === 0 && quiet > CFG.sleepAfterMs * 0.55 && Math.random() < 0.4) {
       // 打哈欠
       perform({ id: 'idle-yawn', pri: PRI.AMBIENT, tier: 'extra', habit: false, mood: 'sleepy', props: IDLE_PROPS, line: '（打了个哈欠）', ms: 2600 })

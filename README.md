@@ -36,7 +36,7 @@
 | 「安静模式」：气泡默认不复述对话原文、不显示流水账/token 消耗 | **只在这个仓库**，原作者不一定认可这个交互取向，没有提交上游 |
 | 扩充台词池：取材中文互联网上 DeepSeek/鲸鱼娘相关的梗 | **只在这个仓库**，同上 |
 | 编排内核 + 好感（羁绊）系统 + 前后端模块化（v0.6.0） | **只在这个仓库** |
-| **表情包**：台词后面跟一张小 GIF（赤风RED「蓝色大肥鱼」，92 张压缩版），按梗的真实含义用，**不拖长气泡**（v0.6.1） | **只在这个仓库**；素材版权归赤风RED |
+| **表情包**：台词后面跟一张小 GIF（赤风RED「蓝色大肥鱼」，v0.6.7 起 157 张全部用上），按梗的真实含义用，**不拖长气泡**（v0.6.1） | **只在这个仓库**；素材版权归赤风RED |
 | **好感系统打磨**：今日心愿（做到有奖励，做不到什么都不发生）、表情包图鉴（点开看梗）、11 条「共同经历」回忆、每周回顾、好感放出；好感页重新编排（v0.6.2） | **只在这个仓库** |
 | **四个按钮只在「点击」时出现**（拖动、鼠标靠近都不出现）；并修复贴角时点几下按钮就叫不出来的 bug（v0.6.3） | **只在这个仓库**，通用修复，可以提给原作者 |
 | **更多 DSH 时刻的反应**：深度思考 / 换模型 / 权限变化 / 她向你提问 / 连续失败 / 余额不足 / 你发呆（v0.6.1） | **只在这个仓库** |
@@ -50,7 +50,7 @@
   又失败了是「坐牢」、提议被你拒了是「小丑」、余额不足是「要米」、深度思考是「正在思考」。图不会拖长气泡，绝大部分台词都有图。
 - 👀 **看得见更多**：深度思考、换模型（换成别家会吃醋）、权限变化、她向你提问、连续失败、你发呆……每个时刻都有一句话或一张图。
 - 🐋 **记得你**：好感（羁绊）系统，10 级、规则全公开、没有惩罚。每天有个**今日心愿**（做到有奖励，做不到什么都不发生），
-  她用出过的每张表情包都收进**图鉴**，每周还会讲一次**上周回顾**。
+  她用出过的每张表情包（157 张，一张不落）都收进**图鉴**，每周还会讲一次**上周回顾**。
 
 **装哪个仓库**：只想要原版体验 → 装 [Andersen216 的原仓库](https://github.com/Andersen216/dsh-whale-girl-live2d)
 （装法把下面命令里的 `3Asterism/dsh-whale-girl-live2d-custom` 换回 `Andersen216/dsh-whale-girl-live2d` 即可）；
@@ -64,7 +64,7 @@
 > interaction-style customizations (a "quiet mode" that suppresses chat-echo/process chatter by default,
 > and an expanded line pool drawing on Chinese-internet DeepSeek/whale-girl memes) are kept only in this
 > repo since they reflect a personal taste the original author may not share. This fork also adds a bond system,
-> and (v0.6.1) meme stickers next to her lines (92 compressed GIFs by 赤风RED, never lengthening a bubble) plus
+> and (v0.6.1) meme stickers next to her lines (v0.6.7: all 157 of 赤风RED's GIFs, compressed; never lengthening a bubble) plus
 > reactions to deep thinking, model switches, permission changes, repeated failures, a low balance and idling.
 
 ---

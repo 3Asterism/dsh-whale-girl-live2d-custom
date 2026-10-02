@@ -1,5 +1,54 @@
 # 更新日志 / Changelog
 
+## 0.6.7 — 2026-10-02
+
+> **English summary**: all 157 of the original stickers are now used (was 92) and every one is wired to at least one scene
+> (enforced by a test). New: solo-sticker bubbles (no text) for when nobody touches her — she plays a game after 60 s of
+> quiet, then dances/plays guitar/peeks; a full compaction flow (start → prune → summary → "taking long" → end, plus the
+> compact button); Raid sign for workflows/sub-agents, Popcat for rapid pokes, burn/fan finishes for huge or very long
+> turns, the "smell-airing dance" after a slow tool returns; keyword memes (the "能成为我母亲的女性" Char line, バブみ/mama
+> vibe, healer, 67, bug…); the "肥鱼" sticky-note stickers are no longer avoided — they are the contrast gag (she denies being
+> fat, the sticker pops up anyway). The sticker album was brought in sync: 92 → 157 with a migration so old saves don't show
+> "all collected" at 92/157, and rewards are paid once.
+
+### 表情包：157 张一张不落
+- **素材**：原图 157 张全部压制入选（之前只挑了 92 张）。新增 65 张：Bug / 喷剂 / 拍蝇 / 枪、Raid、Popcat、六七、催眠、冒泡、刀 / 撬棍 / 敲头（卡通无血腥）、烧 / 电风扇 / 睡觉（整幅不透明，圆角显示）、
+  呆(贴纸)「肥鱼」便利贴、摇可乐、胶带 / 静音、折扇、抓拍、扩音器、舞蹈系列、礼物 / 红包 / 爱心……总计 17.8MB（上限 24MB），原有 92 张的字节不变。
+  `build-stickers.py` 新增逐张的 `speed`（单圈过长的加速，仅「吃甜甜圈」）与 `colors`（色多帧多的减色，7 张）。
+- **每一张都有用武之地**：`persona/stickers.js` 把 157 张挂到情绪 / 事件 / 括号动作词 / 工具 / 单发池上，`test-stickers` 检查闲置一张就红。
+- **梗按真实含义用**（搜过中文互联网的「蓝色大肥鱼」设定与各张图的梗，详见 `docs/表情包设计.md` 第 5 节）：Bug 全家桶＝出 bug / 把虫子拍死；Raid＝直播间突袭举牌（也是杀虫剂）＝分身出击；
+  Popcat＝连点；六七＝67 梗；催眠＝哄主人睡觉；摇可乐＝肥宅快乐水；烧＝烧 token；舞蹈（散味）＝带薪拉屎之后的散味舞。
+
+### 单发图：没人理她的时候，她自己找点事做
+- `perform({ solo })`：不带台词，只在小气泡里丢一张图，停留时间由图自己决定；池子在 `SOLO_STICKER`。
+- **静置阶梯**：主人安静满 60 秒（她还没睡）→ 单发「打游戏」，一段安静只出一次。
+- **待机大脑**多了一类「单发图」（~10%，要求安静 ≥40 秒、每 45 秒最多一次），按时间 / 心情选池：深夜犯困、饭点馋、心情好跳舞 / 弹吉他、低落发呆。低性能档不出现。
+- 睡着时的图换成 睡觉 / UU / 准备阶段（打哈欠 = 打瞌睡）。
+
+### 她看见的更多事（DSH 钩子）
+- **压缩 / compact 全流程**：`compaction/start` → `prune`（清理旧工具结果）→ `summary`（写摘要）→ 拖过 20 秒补一句 → `end`，每一步都有台词和图；点 DSH 的「压缩」按钮当场就有反应（与宿主事件共用一个冷却）。
+- **工作流**启停（只转启停、不转名字）：Raid 举牌 / 清点人数；**团队**有动静（话痨档）；**会话起好名字**（话痨档、不转标题内容）。
+- **慢工具（≥30 秒）回来**：跳散味舞；等人回话 / 分身 / 工作流不算。**收工特别版**：一轮 ≥80 万 token 着火收工，≥15 分钟电风扇收工。
+- **余额从见底回来**（充值）：复活节，每天最多一次。**连点她**：Popcat。
+- **界面操作**多认了：压缩、附件、分享、导出、搜索、语音、置顶、重命名、分叉、撤销、编辑、帮助（中英标签是最佳猜测，认不出就不触发）。
+- 工具池补全：查资料 → 折扇、Ralph 循环 → Popcat、画图 / 文档 → 画板、看图 → 抓拍……
+
+### 对话：反差萌 + 中日圈「妈妈」梗
+- **「肥鱼」不再回避**：被叫胖 → 台词死活不认，「肥鱼」便利贴自己蹦出来（反差萌）；递沙拉 / 体重秤 / 「才没吃撑」同理。
+- **妈妈梗**：新关键词——《逆袭的夏亚》那句「能成为我母亲的女性」、バブみ / 妈妈味、奶妈、ママ；关心类台词池（累了 / 下班 / 睡觉 / 饭点 / 欢迎回来 / 重试 / 收工…）各补一两句「嘴上否认 + 手上照顾」，日语只点缀 ママ / よしよし / おいで / お疲れ様。
+- 新关键词：bug / 修复、67 / 六七（单独发才算）、摸鱼、涨价、哈哈、可乐 / 奶茶、唱歌 / 吉他、生日 / 红包、截图 / 自拍、闭嘴 / 安静点、睡觉 / 熬夜、好热。
+- 收工那句台词接在后面时以前没带选图线索，收工的表情包出不来——已修（顺带让收工特别版有图）。
+
+### 图鉴同步
+- 全集由清单注入，总数自动 157；**扩容迁移**：旧存档里按旧总数达成的里程碑，没达标的摘掉（不再显示「梗大全 ✓」却只有 92/157）；奖励用 `albumPaid` 记账只发一次，重新达成只庆祝（`again: true`、xp 0）；
+  旧存档没有 `albumPaid` 就按「之前达成的都领过」迁移。图鉴页沿用「已收录 + 8 个「？」预告 + 一块「+N」」，157 格不会撑成一面墙。
+
+### 测试与已知限制
+- 新增 `tools/smoke-scenes.mjs`（真浏览器 43 项，含图鉴扩容）；`test-stickers` 49、`test-bond` 126、`test-host` 226。写自检时抓到一个真 bug：界面动作的台词 id 默认等于识别 key，我的新动作 key 与台词 id 不同，点了只演脸不说话——已修并补了单测。
+- **界面标签没在真 DSH 上校准过**（压缩 / 附件 / 分叉等）：用 `DSHPet.page.recent()` 看真实标签，缺的往 `page-actions.js` 补一行。`team/*`、`tool-workflow/*` 只取「发生了」，载荷细节没深挖。
+- **敲头**（大锤）只挂在「被骂笨」的自嘲里、极少出现——之前主人说过不要大锤砸头的 Live2D 动作，这是一张 96px 的小图，不是同一件事，但如果看着不舒服，从 `kwScold` 池里删掉它即可。
+- 预览服务器是常驻进程：改了 `lib/`（引擎 / slim）要重启才生效。
+
 ## 0.6.6 — 2026-10-02
 
 > **English summary**: a full performance review. Measured first, so some suspects were cleared (per-frame JS is ~4µs; not worth
