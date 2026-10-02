@@ -219,6 +219,23 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
 .dshp-gift>.dshp-gift-info{flex:1;min-width:0;font-size:calc(10.5px * var(--dshp-ps));line-height:1.45}
 .dshp-gift>.dshp-gift-info>b{font-size:calc(11.5px * var(--dshp-ps))}
 .dshp-gift>.dshp-gift-info>div{opacity:.6}
+/* 今日心愿：好感页里不折叠的那一块；暖色渐变，跟下面的折叠分区区分开 */
+.dshp-wish{margin-top:calc(7px * var(--dshp-ps));border:1px solid var(--dshp-line);border-radius:calc(9px * var(--dshp-ps));
+  padding:calc(7px * var(--dshp-ps)) calc(9px * var(--dshp-ps));background:linear-gradient(135deg,rgba(255,157,77,.12),rgba(124,92,255,.08))}
+.dshp-wish.dshp-done{opacity:.7}
+.dshp-wish-head{display:flex;align-items:center;gap:calc(7px * var(--dshp-ps));font-weight:600;font-size:calc(12px * var(--dshp-ps))}
+.dshp-wish-mark{flex:none;width:calc(15px * var(--dshp-ps));height:calc(15px * var(--dshp-ps));border-radius:50%;
+  border:1.5px solid var(--dshp-accent);display:inline-flex;align-items:center;justify-content:center;
+  font-size:calc(10px * var(--dshp-ps));color:#fff;line-height:1}
+.dshp-wish.dshp-done .dshp-wish-mark{background:var(--dshp-accent)}
+/* 表情包图鉴 */
+.dshp-album{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(34px * var(--dshp-ps)),1fr));gap:calc(4px * var(--dshp-ps));margin-top:calc(6px * var(--dshp-ps))}
+.dshp-album-tile{aspect-ratio:1;border:1px solid var(--dshp-line);border-radius:calc(7px * var(--dshp-ps));background:transparent;
+  padding:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font:inherit;color:inherit}
+.dshp-album-tile img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.dshp-album-tile:not(.dshp-locked):hover{background:rgba(124,92,255,.14)}
+.dshp-album-tile.dshp-locked{opacity:.28;cursor:default;font-size:calc(11px * var(--dshp-ps))}
+.dshp-album-cap{font-size:calc(10.5px * var(--dshp-ps));line-height:1.5;min-height:2.6em;margin-top:calc(5px * var(--dshp-ps));opacity:.75;white-space:pre-wrap}
 .dshp-label{display:flex;align-items:center;gap:7px;margin:6px 0;font-size:11.5px}
 .dshp-label input[type=range]{flex:1;accent-color:var(--dshp-accent)}
 /* ——— HUD：右键弹出的「余额 / 本轮消耗 / 峰谷计价」面板 ———

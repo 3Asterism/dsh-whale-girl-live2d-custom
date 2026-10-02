@@ -77,12 +77,14 @@ export function resolvePools(spec, data) {
  * @param ctx.manifest id → { ms }
  * @param ctx.ttl 气泡打算停留的毫秒数；null = 不按时长过滤（独立表情包 / 常驻气泡）
  * @param ctx.recent Map<id, 上次出现的时间戳>
- * @param ctx.force 显式指定 / 高优先级：不管近期用过没有
+ * @param ctx.force 显式指定 / 高优先级：不管近期用过没有、也不受好感等级限制
+ * @param ctx.level 当前好感等级；ctx.minLevel：图 id → 最低等级
  * 偏好「近 90 秒没用过」的；都用过就选最久没用的（LRU），所以只要有够短的候选就一定有图。
  */
 export function chooseFrom(pool, ctx) {
-  const { manifest, ttl = null, recent, now, force = false, rand = Math.random } = ctx
-  const cand = pool.filter((id) => manifest[id] && (ttl == null || manifest[id].ms <= ttl + SNAP_MS))
+  const { manifest, ttl = null, recent, now, force = false, rand = Math.random, level = 99, minLevel = {} } = ctx
+  // 好感等级放出：等级不够的图先跳过（显式指定的不受限）
+  const cand = pool.filter((id) => manifest[id] && (force || (minLevel[id] || 1) <= level) && (ttl == null || manifest[id].ms <= ttl + SNAP_MS))
   if (!cand.length) return null
   if (force || !recent) return cand[Math.min(cand.length - 1, Math.floor(rand() * cand.length))]
   const seen = (id) => recent.get(id) || -Infinity

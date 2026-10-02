@@ -1,5 +1,6 @@
 /** director/conds.js —— 由 tools/split-front.mjs 从 pet.js 拆出；模块职责见 assets/app/README.md */
 
+import { bondMemory } from '../behavior/bond.js'
 import { noteProcess } from '../behavior/events.js'
 import { CFG } from '../config.js'
 import { activeSubagents } from '../core/state.js'
@@ -83,7 +84,10 @@ export function approvalDecided(outcome) {
   syncConds()
   if (outcome === 'allowed-once') perform({ id: 'approval-yes', pri: PRI.CUE, tier: 'core', mood: 'happy', say: 'approvalYes', ms: 2200 })
   // 提议被拒：「小丑竟是我自己」。六成演自嘲版（rejectClown，配小丑图），四成是平和的「好吧听主人的」
-  else if (outcome === 'rejected') perform({ id: 'approval-no', pri: PRI.CUE, tier: 'core', mood: 'sad', say: Math.random() < 0.6 ? 'rejectClown' : 'approvalNo', ms: 2600 })
+  else if (outcome === 'rejected') {
+    const ms = perform({ id: 'approval-no', pri: PRI.CUE, tier: 'core', mood: 'sad', say: Math.random() < 0.6 ? 'rejectClown' : 'approvalNo', ms: 2600 })
+    if (ms) bondMemory('clown', 3500)
+  }
 }
 
 // —— 重试：LLM 调用失败正在重试。恢复后（出了新的回复 / 一轮结束）自动撤 ——

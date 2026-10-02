@@ -7,7 +7,8 @@
 
 import { BASE, CFG } from '../config.js'
 import { log } from '../core/util.js'
-import { ACTION_STICKER, EVENT_STICKER, FALLBACK_STICKER, MOOD_STICKER } from '../persona/stickers.js'
+import { bond } from '../core/state.js'
+import { ACTION_STICKER, EVENT_STICKER, FALLBACK_STICKER, MIN_LEVEL, MOOD_STICKER } from '../persona/stickers.js'
 import { pickSticker } from './sticker-pick.js'
 
 const DATA = { EVENT_STICKER, ACTION_STICKER, MOOD_STICKER, FALLBACK_STICKER }
@@ -17,6 +18,7 @@ export const STK = {
   recent: new Map(), // id → 上次出现的时间戳
   lastAt: 0, // 全局上次出图的时间
   version: '',
+  onShown: null, // 她用出一张图时的回调（main.js 接到图鉴上报）
 }
 
 const reduceMotion = () => {
@@ -32,6 +34,9 @@ export const stickerOk = () => CFG.stickers !== false && !!STK.manifest && !redu
 
 export const stickerMs = (id) => (STK.manifest && STK.manifest[id] ? STK.manifest[id].ms : 0)
 
+/** 一张图的地址（好感页图鉴也用）。 */
+export const stickerUrl = (id) => (STK.manifest && STK.manifest[id] ? urlOf(id) : '')
+
 const urlOf = (id) => `${BASE}/stickers/${STK.manifest[id].file}${STK.version ? '?v=' + STK.version : ''}`
 
 /** 启动时拉清单；失败就静默（没有表情包她照样能说话）。拉完过一会儿在空闲时把图预取进浏览器缓存。 */
@@ -44,6 +49,7 @@ export async function loadStickers() {
     const j = await r.json()
     if (!j || typeof j.stickers !== 'object') return
     STK.manifest = j.stickers
+    window.__DSH_PET_STICKERS__ = j.stickers // 好感页 / 图鉴要用（名字、梗），不必各处再 fetch
     log(`表情包就绪：${Object.keys(STK.manifest).length} 张`)
     setTimeout(prefetchAll, 15000)
   } catch (e) {
@@ -73,7 +79,7 @@ async function prefetchAll() {
 export function chooseSticker(spec) {
   if (!stickerOk()) return null
   const now = performance.now()
-  const id = pickSticker(spec, DATA, { manifest: STK.manifest, recent: STK.recent, lastAt: STK.lastAt, now })
+  const id = pickSticker(spec, DATA, { manifest: STK.manifest, recent: STK.recent, lastAt: STK.lastAt, now, level: bond.level || 1, minLevel: MIN_LEVEL })
   if (id) noteShown(id, now)
   return id
 }
@@ -81,6 +87,11 @@ export function chooseSticker(spec) {
 export function noteShown(id, now = performance.now()) {
   STK.recent.set(id, now)
   STK.lastAt = now
+  if (STK.onShown) {
+    try {
+      STK.onShown(id)
+    } catch (e) {}
+  }
 }
 
 /** 造一个 <img>。每次都新建：新元素从第 0 帧开始播，「话出现 = 动画从头播」。 */

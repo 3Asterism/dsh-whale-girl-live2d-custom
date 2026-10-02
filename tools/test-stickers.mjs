@@ -51,7 +51,7 @@ check('每张是 GIF 文件头、96×96、一圈时长 100–2600ms', ids.every(
   const m = manifest[i]
   return b.slice(0, 3).toString() === 'GIF' && b.readUInt16LE(6) === 96 && b.readUInt16LE(8) === 96 && m.ms >= 100 && m.ms <= 2600
 }))
-check('清单里每张都写了「梗」说明', ids.every((i) => typeof manifest[i].meme === 'string' && manifest[i].meme.length > 1))
+check('清单里每张都写了「梗」说明和中文名（图鉴里显示）', ids.every((i) => typeof manifest[i].meme === 'string' && manifest[i].meme.length > 1 && typeof manifest[i].name === 'string' && manifest[i].name))
 
 const allRefs = new Map() // id → 引用位置
 const ref = (where, pool) => {
@@ -62,6 +62,7 @@ for (const [k, pool] of Object.entries(data.EVENT_STICKER)) ref('event:' + k, po
 for (const [, pool] of data.ACTION_STICKER) ref('action', pool)
 for (const [k, pool] of Object.entries(data.TOOL_STICKER)) ref('tool:' + k, pool)
 ref('fallback', data.FALLBACK_STICKER)
+ref('minLevel', Object.keys(data.MIN_LEVEL))
 ref('start', data.START_STICKER)
 ref('thinking', data.THINKING_STICKER)
 const dangling = [...allRefs.values()].filter((r) => !manifest[r.id])
@@ -111,6 +112,17 @@ check('没有台词（常驻 / 独立）不走兜底，免得乱配', pickSticke
 check('ttl 太短、事件池里的图太长 → 退到下一个候选池，仍然不超时', pickSticker({ say: 'ev', mood: 'happy', line: '嗯', ttl: 450 }, D, ctx()) === 'a' && pickSticker({ say: 'ev', mood: 'happy', line: '嗯', ttl: 300 }, D, ctx()) === null && pickSticker({ pool: ['c'], line: '嗯', ttl: 300, fallback: false }, D, ctx()) === null)
 check('常驻气泡节流：gapMs 内不再配图，显式指定不受限', pickSticker({ pool: ['a'], gapMs: 20000 }, D, ctx({ lastAt: 1e6 - 5000 })) === null && pickSticker({ pool: ['a'], gapMs: 20000 }, D, ctx({ lastAt: 1e6 - 30000 })) === 'a' && pickSticker({ sticker: 'a', gapMs: 20000 }, D, ctx({ lastAt: 1e6 - 5000 })) === 'a')
 check('一次性台词不节流（gapMs 不传）：刚出过图也照样配', pickSticker({ say: 'ev', line: '嗯', ttl: 5000 }, D, ctx({ lastAt: 1e6 - 100 })) === 'b')
+
+// 好感等级放出（傲娇 → 黏人）
+const ML = { s_love: 3, s_rose: 5 }
+const MM = { s_love: { ms: 900 }, s_rose: { ms: 900 }, s_ok: { ms: 900 } }
+check('好感等级放出：等级不够的图被跳过，够了才出', chooseFrom(['s_love', 's_rose', 's_ok'], { manifest: MM, ttl: 3000, recent: new Map(), now: 1e6, level: 1, minLevel: ML, rand: () => 0 }) === 's_ok'
+  && chooseFrom(['s_love', 's_ok'], { manifest: MM, ttl: 3000, recent: new Map(), now: 1e6, level: 3, minLevel: ML, rand: () => 0 }) === 's_love'
+  && chooseFrom(['s_rose'], { manifest: MM, ttl: 3000, recent: new Map(), now: 1e6, level: 4, minLevel: ML }) === null
+  && chooseFrom(['s_rose'], { manifest: MM, ttl: 3000, recent: new Map(), now: 1e6, level: 5, minLevel: ML }) === 's_rose')
+check('好感等级放出：显式指定（force）不受等级限制', chooseFrom(['s_rose'], { manifest: MM, ttl: null, recent: new Map(), now: 1e6, level: 1, minLevel: ML, force: true }) === 's_rose')
+check('好感等级放出：池子里全是黏人的图时，低等级退到下一个候选池', pickSticker({ say: 'ev', mood: 'happy', line: '嗯', ttl: 5000 }, { EVENT_STICKER: { ev: ['s_love'] }, ACTION_STICKER: [], MOOD_STICKER: { happy: ['s_ok'] }, FALLBACK_STICKER: [] }, { manifest: MM, recent: new Map(), lastAt: 0, now: 1e6, level: 1, minLevel: ML }) === 's_ok')
+check('MIN_LEVEL 里的每张图都存在、等级在 2–10 之间', Object.entries(data.MIN_LEVEL).every(([id, lv]) => manifest[id] && lv >= 2 && lv <= 10))
 
 // 蒙特卡洛：随机选图 2000 次，没有一次超过 ttl+400
 let over = 0

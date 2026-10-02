@@ -188,6 +188,10 @@ export function makeBubble(el, body, foot, dot, headText, msg, onResize) {
     get asking() {
       return !!askRow
     },
+    /** 脚注现在写着什么（别的模块要往脚注里写小字时，先看有没有人占着）。 */
+    get footText() {
+      return foot.textContent
+    },
     /** 现在是不是只有一张表情包（诊断 / 测试用）。 */
     get solo() {
       return el.classList.contains('dshp-solo')

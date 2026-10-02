@@ -11,7 +11,7 @@
 import { R, agent, bond } from '../core/state.js'
 import { readLayout, saveLayout } from '../core/storage.js'
 import { DIR, PRI, chatLevel, noteUser, perform, performingNow, yieldTo } from '../director/perform.js'
-import { applySnapshot, fetchBond, postAct, postAway, postFeed, postMemory, postStory, postToggle } from '../net/bond.js'
+import { applySnapshot, fetchBond, postAct, postAway, postFeed, postMemory, postSticker, postStory, postToggle } from '../net/bond.js'
 import { GIFT_FAIL_SAY, GIFT_REACT } from '../persona/gifts.js'
 import { lineFor } from '../persona/lines.js'
 import { STORIES } from '../persona/stories.js'
@@ -41,25 +41,83 @@ export async function bondAct(kind) {
   return r
 }
 
-/** 上报一条只有前端知道的回忆（宿主按白名单校验、幂等）。已经解锁过的不再发请求。 */
-export function bondMemory(id) {
+/**
+ * 上报一条只有前端知道的回忆（宿主按白名单校验、幂等）。已经解锁过的不再发请求。
+ * later：毫秒。「共同经历」类回忆（坐牢 / 小丑 / 要米……）是在她那句台词的当口触发的，立刻弹「新回忆」会把那句顶掉，
+ * 所以让它晚几秒再出来。
+ */
+export function bondMemory(id, later = 0) {
   if (!bond.enabled) return
   const known = bond.snap && bond.snap.memories && bond.snap.memories.find((m) => m.id === id)
   if (known && known.unlockedAt) return
   postMemory(id).then((r) => {
     if (!r || !r.snapshot) return
     applySnapshot(r.snapshot)
-    handleEvents(r.events)
+    handleEvents(r.events, later)
   })
 }
 
-/** 宿主推来的 / 接口返回的事件：回忆解锁、连续陪伴天数。 */
-export function handleEvents(events) {
+/**
+ * 她用出了一张表情包：上报给宿主收进图鉴（宿主按清单校验；第一次见到才算，幂等）。
+ * 已经收录的不再发请求；还没拿到快照（刚开机）也先不报，下次再用到这张时会补上。
+ * 收录带来的心愿 / 里程碑演出晚几秒再出，别顶掉这张图所在的那句台词。
+ */
+const STICKER_PENDING = new Set()
+export function bondSticker(id) {
+  const snap = bond.snap
+  if (!bond.enabled || !snap || !snap.album || !snap.album.total) return
+  if (snap.album.ids.includes(id) || STICKER_PENDING.has(id)) return
+  STICKER_PENDING.add(id)
+  postSticker(id)
+    .then((r) => {
+      STICKER_PENDING.delete(id)
+      if (!r || !r.snapshot) return
+      applySnapshot(r.snapshot)
+      if (r.isNew) {
+        const m = STICKER_NAME(id)
+        const ui = R.ui
+        // 脚注已经有别的小字（比如「心愿达成 +6」）就不覆盖它
+        if (ui && ui.bubble.visible && !ui.bubble.asking && !ui.bubble.solo && !ui.bubble.footText) ui.bubble.note(`图鉴 +1：${m}（${r.snapshot.album.got}/${r.snapshot.album.total}）`)
+      }
+      if (r.events && r.events.length) handleEvents(r.events, 2800)
+    })
+    .catch(() => STICKER_PENDING.delete(id))
+}
+
+/** 图鉴里显示的名字：清单里的中文名，去掉「 1」「 2」这种编号。 */
+function STICKER_NAME(id) {
+  const m = window.__DSH_PET_STICKERS__ && window.__DSH_PET_STICKERS__[id]
+  return m && m.name ? String(m.name).replace(/\s*\d+$/, '') : id
+}
+
+/** 每种事件的演出大约多长（毫秒）。同一批里有好几件事时，按这个错开，别互相顶掉。 */
+const EVENT_MS = { memory: 7000, wish: 4200, album: 4600, streak: 4200 }
+
+/**
+ * 宿主推来的 / 接口返回的事件：心愿达成、图鉴里程碑、回忆解锁、连续陪伴天数。
+ * 同一批里有好几件（比如「心愿达成」同时解锁了「小心愿」回忆）时**依次演**，一件演完再下一件——
+ * 一起抢气泡的话，后来的会把前一个的庆祝直接顶掉。delay：整批晚多少毫秒再开始。
+ */
+export function handleEvents(events, delay = 0) {
+  let t = delay
   for (const e of events || []) {
-    if (e.type === 'memory') showMemory(e.id)
-    else if (e.type === 'streak') {
-      perform({ id: 'bond-streak', pri: PRI.CUE, tier: 'extra', habit: false, mood: 'happy', say: 'streak', vars: { n: e.days }, ms: 4200, cool: 5000 })
-    }
+    if (!EVENT_MS[e.type]) continue
+    if (t > 0) setTimeout(() => showEvent(e), t)
+    else showEvent(e)
+    t += EVENT_MS[e.type] + 400
+  }
+}
+
+function showEvent(e) {
+  if (e.type === 'memory') showMemory(e.id)
+  else if (e.type === 'streak') {
+    perform({ id: 'bond-streak', pri: PRI.CUE, tier: 'extra', habit: false, mood: 'happy', say: 'streak', vars: { n: e.days }, ms: 4200, cool: 5000 })
+  } else if (e.type === 'wish') {
+    // 今日心愿达成：庆祝 + 奖励写在脚注里（公开，不藏）
+    const ms = perform({ id: 'wish-done', pri: PRI.CUE, tier: 'core', habit: false, mood: 'love', heart: true, say: 'wishDone', ms: 4200, cool: 3000 })
+    if (ms) R.ui.bubble.note(`心愿达成：${e.text.replace(/^今天/, '')} · 羁绊 +${e.xp}${e.tickets ? ` · token +${e.tickets}` : ''}`)
+  } else if (e.type === 'album') {
+    perform({ id: 'album-' + (e.full ? 'full' : 'ms'), pri: PRI.CUE, tier: 'core', habit: false, mood: 'excited', heart: !!e.full, say: e.full ? 'albumFull' : 'albumMilestone', vars: { title: e.title }, ms: 4600, cool: 3000 })
   }
 }
 

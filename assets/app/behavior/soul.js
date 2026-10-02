@@ -1,5 +1,5 @@
 /**
- * behavior/soul.js —— v0.6.1「有灵魂」：她能看见的 DSH 世界又多了一圈。
+ * behavior/soul.js —— v0.5.1「有灵魂」：她能看见的 DSH 世界又多了一圈。
  *
  * 之前她只对「回复一句话 / 点按钮 / 工具调用」有反应；这一版把下面这些时刻也接上了：
  *   · 深度思考（reasoning 增量）→ 「正在思考」表情包（单独出现，不用说话）
@@ -20,6 +20,7 @@ import { CFG } from '../config.js'
 import { R, agent } from '../core/state.js'
 import { DIR, PRI, perform, performingNow } from '../director/perform.js'
 import { claim } from '../net/api.js'
+import { bondMemory } from './bond.js'
 import { hud } from '../ui/hud.js'
 
 export const SOUL = {
@@ -115,7 +116,7 @@ function reactModel(prev, next) {
   }
   if (!isDeepSeek(next)) {
     // 换成别家的：吃醋，嘴硬（不说品牌）
-    perform({ id: 'soul-model-away', pri: PRI.CUE, tier: 'extra', mood: 'confused', say: 'modelAway', ms: 3000, cool: 6000 })
+    if (perform({ id: 'soul-model-away', pri: PRI.CUE, tier: 'extra', mood: 'confused', say: 'modelAway', ms: 3000, cool: 6000 })) bondMemory('jealous', 3500)
   } else if (prev && !isDeepSeek(prev)) {
     // 从别家换回 DeepSeek：欢迎回来
     perform({ id: 'soul-model-back', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'modelBack', ms: 3000, cool: 6000 })
@@ -133,7 +134,7 @@ export function noteModelPick(label) {
   const away = SOUL.model.domAway === true
   SOUL.model.domAway = !ds
   if (!ds) {
-    perform({ id: 'soul-model-away', pri: PRI.CUE, tier: 'extra', mood: 'confused', say: 'modelAway', ms: 3000, cool: 6000 })
+    if (perform({ id: 'soul-model-away', pri: PRI.CUE, tier: 'extra', mood: 'confused', say: 'modelAway', ms: 3000, cool: 6000 })) bondMemory('jealous', 3500)
   } else if (away) {
     perform({ id: 'soul-model-back', pri: PRI.CUE, tier: 'extra', mood: 'happy', say: 'modelBack', ms: 3000, cool: 6000 })
   }
@@ -148,7 +149,7 @@ function onSandbox(m) {
   SOUL.sandbox = m.mode
   if (!m.mode || prev === null || prev === m.mode) return // 第一次观察只记账
   if (m.mode === 'danger-full-access') {
-    perform({ id: 'soul-sandbox', pri: PRI.CUE, tier: 'extra', mood: 'sweat', say: 'sandboxFull', ms: 3000, cool: 20000 })
+    if (perform({ id: 'soul-sandbox', pri: PRI.CUE, tier: 'extra', mood: 'sweat', say: 'sandboxFull', ms: 3000, cool: 20000 })) bondMemory('full-trust', 3500)
   } else if (m.mode === 'read-only') {
     perform({ id: 'soul-sandbox', pri: PRI.CUE, tier: 'extra', mood: 'confused', say: 'sandboxReadonly', ms: 3000, cool: 20000 })
   }
@@ -180,7 +181,7 @@ export function noteThinking() {
   if (!(cur && cur.pri > PRI.CUE) && (!bub.visible || busyLine)) bub.sticker('thinking', { maxMs: 10000 })
   const say = (id) => () => {
     if (!SOUL.think.active || SOUL.think.key !== key || agent.status !== 'thinking') return
-    perform({ id: 'soul-' + id, pri: PRI.CUE, tier: 'extra', say: id, ms: 3000, habit: false })
+    if (perform({ id: 'soul-' + id, pri: PRI.CUE, tier: 'extra', say: id, ms: 3000, habit: false }) && id === 'thinkLong') bondMemory('long-think', 3500)
   }
   SOUL.think.timers.push(setTimeout(say('thinkLong'), 30000), setTimeout(say('thinkLonger'), 90000))
 }
@@ -198,6 +199,7 @@ export function stopThinking() {
 // ——————————————————————————————————————————————————————————————
 
 export function noteAskUser(callId) {
+  bondMemory('ask-user', 3500) // 她第一次举牌问你
   noteAskDone()
   SOUL.ask = {
     callId,
@@ -241,7 +243,7 @@ export async function checkLowBalance() {
   // 刚收工，等收工那阵表演过去再要
   setTimeout(() => {
     if (agent.status !== 'idle') return
-    perform({ id: 'low-balance-beg', pri: PRI.CUE, tier: 'core', mood: 'sad', say: 'lowBalanceBeg', vars: { n: th }, sticker: 'beg', ms: 4600, habit: false })
+    if (perform({ id: 'low-balance-beg', pri: PRI.CUE, tier: 'core', mood: 'sad', say: 'lowBalanceBeg', vars: { n: th }, sticker: 'beg', ms: 4600, habit: false })) bondMemory('beg-rice', 5000)
   }, 3600)
 }
 
@@ -289,7 +291,7 @@ export function soulTick(ctx) {
     const quiet = t - typing.lastKey
     if (quiet > INPUT_IDLE_MS && quiet < 10 * 60000 && SOUL.idle.inputKey !== typing.lastKey) {
       SOUL.idle.inputKey = typing.lastKey
-      perform({ id: 'soul-idle-input', pri: PRI.AMBIENT, tier: 'chatty', mood: 'thinking', say: 'idleInput', ms: 3800, habit: false, budget: true, cool: 5 * 60000 })
+      if (perform({ id: 'soul-idle-input', pri: PRI.AMBIENT, tier: 'chatty', mood: 'thinking', say: 'idleInput', ms: 3800, habit: false, budget: true, cool: 5 * 60000 })) bondMemory('idle-seen', 4500)
       return
     }
   }

@@ -159,6 +159,7 @@ def main():
             too_big.append((c["id"], round(kb)))
         manifest[c["id"]] = {
             "file": c["id"] + ".gif",
+            "name": c["src"],  # 原文件名里的中文名（图鉴里显示）
             "ms": loop_ms,
             "w": args.size,
             "h": args.size,

@@ -88,6 +88,14 @@ export async function routineTick() {
     return true
   }
   const hourSlot = Math.floor(now / 3600000)
+  // v0.6.2：今日心愿——每天第一次空闲时悄悄提一句（不强求）；每周回顾——每周一次，白天空闲时，上周至少 3 轮才讲
+  const snap = bond.enabled ? bond.snap : null
+  if (snap && snap.wish && !snap.wish.done && (await slot('wish', { say: 'wishToday', vars: { w: snap.wish.text }, mood: 'shy', ms: 5200 }))) return
+  const rc = snap && snap.recap
+  if (rc && d.getHours() >= 9 && d.getHours() < 21 && (await claim('routine:recap-' + rc.key, 'forever'))) {
+    perform({ id: 'routine-recap', pri: PRI.AMBIENT, tier: 'extra', habit: false, budget: true, mood: 'happy', say: 'weekRecap', vars: { d: rc.days, t: rc.turns }, ms: 6500 })
+    return
+  }
   if (inWindow(d, 12, 0, 40) && (await slot('lunch', { say: 'lunch', mood: 'excited' }))) return
   if (inWindow(d, 15, 0, 40) && (await slot('tea', { say: 'tea', mood: 'happy', props: ['parfait'], ms: 8000 }))) return
   if (inWindow(d, 18, 30, 40) && (await slot('dinner', { say: 'dinner', mood: 'excited' }))) return

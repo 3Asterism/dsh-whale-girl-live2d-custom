@@ -190,6 +190,34 @@ export function wireInteractions() {
   let dragMoved = false
   let start = null
   let leaveTimer = null
+  let dockPinTimer = null
+  const pointer = { x: -1, y: -1 }
+  const pointerOnHer = () => hitTest(pointer.x, pointer.y) || overDock(pointer.x, pointer.y)
+  /**
+   * 把四个按钮（说话 / 菜单 / 收起 / 打开 DSH）亮出来并停留 ms 毫秒。
+   * 主人反馈：「只有拖动才会显示，拖动不太符合人类的习惯，我希望鼠标点击也会显示」。
+   * 原来只认「鼠标在她身上移动」（悬停）——桌面壳点击穿透、触屏、鼠标一落下就没有 pointermove 的情况下
+   * 根本收不到悬停，只有按住拖动才会碰巧触发。现在**按下、点击、拖完**都会亮出来；
+   * 到点时鼠标还停在她身上 / 按钮上就继续留着，不会在你要点的时候缩回去。
+   */
+  const pinDock = (ms) => {
+    root.classList.add('dshp-hover')
+    if (leaveTimer) {
+      clearTimeout(leaveTimer)
+      leaveTimer = null
+    }
+    clearTimeout(dockPinTimer)
+    const check = () => {
+      dockPinTimer = null
+      if (root.classList.contains('dshp-open')) return // 面板开着就一直留着，关面板时自然收
+      if (pointerOnHer()) {
+        dockPinTimer = setTimeout(check, 1200)
+        return
+      }
+      root.classList.remove('dshp-hover')
+    }
+    dockPinTimer = setTimeout(check, ms)
+  }
   const drag = { vx: 0, vy: 0 }
   /**
    * 拖动这一路上用的留白缓存：按下的时候现测一次就够了（拖动中她的轮廓不会变），
@@ -206,6 +234,8 @@ export function wireInteractions() {
         // 主人反馈：「我鼠标往下走要去点那三个键，一离开她身上它们就消失了，点不着」。
         // 原因：原来只认 hitTest（她模型身上），而工具栏在她**下方**、不在模型掩码里。
         // 现在把「鼠标在工具栏矩形内」也算作悬停，并且离开后多留 900ms。
+        pointer.x = e.clientX
+        pointer.y = e.clientY
         const on = hitTest(e.clientX, e.clientY) || overDock(e.clientX, e.clientY)
         if (on) {
           root.classList.add('dshp-hover')
@@ -213,7 +243,7 @@ export function wireInteractions() {
             clearTimeout(leaveTimer)
             leaveTimer = null
           }
-        } else if (!leaveTimer && !root.classList.contains('dshp-open')) {
+        } else if (!leaveTimer && !dockPinTimer && !root.classList.contains('dshp-open')) {
           leaveTimer = setTimeout(() => {
             leaveTimer = null
             if (!root.classList.contains('dshp-open')) root.classList.remove('dshp-hover')
@@ -251,6 +281,8 @@ export function wireInteractions() {
       }
       // 只记录坐标，真正的跟随在 gazeTick 里限速执行——
       // 直接在 pointermove 里写 focusController 就是「螺旋桨」的成因。
+      pointer.x = e.clientX
+      pointer.y = e.clientY
       gaze.pointer.x = e.clientX
       gaze.pointer.y = e.clientY
       gaze.pointer.seen = true
@@ -267,6 +299,9 @@ export function wireInteractions() {
       e.stopPropagation()
       e.preventDefault()
       noteUser()
+      pointer.x = e.clientX
+      pointer.y = e.clientY
+      pinDock(6000) // 一按下就亮出四个按钮，不用非得拖
       strokeReset()
       dragging = true
       dragMoved = false
@@ -285,6 +320,7 @@ export function wireInteractions() {
     (e) => {
       if (!dragging) return
       dragging = false
+      pinDock(5000) // 点完 / 拖完都留几秒，够你去点按钮
       const wasHold = gestureEndHold()
       if (dragMoved) {
         // 松手：先看要不要贴边吸附，没吸附上再走自由惯性

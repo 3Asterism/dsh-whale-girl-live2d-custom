@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const load = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href)
-const { createBond, engine: E, LEVELS, SOURCES, GIFTS, MEMORIES, FEED_DAILY_CAP } = await load('lib/bond/index.js')
+const { createBond, engine: E, LEVELS, SOURCES, GIFTS, MEMORIES, FEED_DAILY_CAP, WISHES, WISH, ALBUM_MILESTONES } = await load('lib/bond/index.js')
 const cal = await load('lib/calendar.js')
 
 let pass = 0
@@ -37,7 +37,7 @@ const mem = { bond: undefined }
 function make(opts = {}) {
   mem.bond = opts.seed
   now = opts.start || MON
-  return createBond({ read: () => mem.bond, write: (b) => (mem.bond = JSON.parse(JSON.stringify(b))), clock: () => now, rand: opts.rand })
+  return createBond({ read: () => mem.bond, write: (b) => (mem.bond = JSON.parse(JSON.stringify(b))), clock: () => now, rand: opts.rand, stickers: opts.stickers || [] })
 }
 const advance = (ms) => (now += ms)
 const SEC = 1000
@@ -337,6 +337,185 @@ check('日历：addDays', cal.addDays('2026-10-31', 1) === '2026-11-01' && cal.a
   const tr = t.snapshot().trait
   check('倾向称号：摸头最多 → 撒娇鲸（至少 10 次才有）', tr && tr.id === 'stroke' && tr.name === '撒娇鲸', JSON.stringify(tr))
   check('没到 10 次没有称号', make().snapshot().trait === null)
+}
+
+
+// ———— v0.6.2：今日心愿（低压：做到有奖励，做不到什么都不发生）————
+const DAY0 = cal.localDay(MON)
+const seedWish = (id, extra = {}) => ({ firstSeenAt: MON - 5 * 24 * HOUR, wish: { date: DAY0, id, done: false, prev: '' }, ...extra })
+{
+  const s = make().snapshot()
+  check('每天有一个心愿（带文字和做法）', s.wish && s.wish.text && s.wish.hint && s.wish.done === false && s.wish.reward.xp === WISH.xp, s.wish && s.wish.text)
+  check('同一天固定一个（按日期确定，不是随机）', make().snapshot().wish.id === make().snapshot().wish.id)
+
+  const ids = []
+  const w = make()
+  for (let i = 0; i < 14; i++) {
+    ids.push(w.snapshot().wish.id)
+    advance(24 * HOUR)
+  }
+  check('连续 14 天，相邻两天的心愿不重样', ids.every((x, i) => i === 0 || x !== ids[i - 1]), ids.join(','))
+  check('一个月里会出现好几种不同的心愿', new Set(ids).size >= 4, `${new Set(ids).size} 种`)
+
+  const poor = make({ seed: { tickets: 0 } })
+  const poorIds = []
+  for (let i = 0; i < 25; i++) {
+    advance(24 * HOUR)
+    poorIds.push(poor.snapshot().wish.id)
+  }
+  check('token 是 0 的时候不会出投喂类心愿（不变相催你干活）', !poorIds.some((x) => x.startsWith('feed-')), poorIds.slice(0, 6).join(','))
+  check('没有表情包清单就不会出「新表情包」心愿', !ids.concat(poorIds).includes('sticker'))
+
+  // 各类心愿的完成条件
+  const stroke = make({ seed: seedWish('stroke') })
+  const r1 = stroke.act('stroke')
+  const ev1 = r1.events.find((e) => e.type === 'wish')
+  check('摸头心愿：摸一次就达成，奖励 +6 羁绊、+1 token', ev1 && ev1.id === 'stroke' && ev1.xp === 6 && ev1.tickets === 1 && r1.snapshot.tickets === 6, JSON.stringify(ev1))
+  check('心愿达成后快照标记 done，并解锁「小心愿」回忆', r1.snapshot.wish.done === true && r1.snapshot.memories.find((m) => m.id === 'first-wish').unlockedAt > 0)
+  advance(4 * MIN)
+  check('同一天只发一次奖励', !stroke.act('stroke').events.some((e) => e.type === 'wish'))
+
+  const feedW = make({ seed: seedWish('feed-rice') })
+  check('投喂心愿：喂别的不算', !feedW.feed('tea').events.some((e) => e.type === 'wish'))
+  const rf = feedW.feed('rice')
+  check('投喂心愿：喂对了才算（白饭）', rf.events.some((e) => e.type === 'wish' && e.id === 'feed-rice'))
+
+  const turns = make({ seed: seedWish('turns3') })
+  const t1 = turns.onTurn({ tokens: 100, outcome: 'completed' }).events
+  const t2 = turns.onTurn({ tokens: 100, outcome: 'completed' }).events
+  const t3 = turns.onTurn({ tokens: 100, outcome: 'completed' }).events
+  check('三轮心愿：前两轮不算，第三轮达成', !t1.concat(t2).some((e) => e.type === 'wish') && t3.some((e) => e.type === 'wish' && e.id === 'turns3'))
+
+  const praise = make({ seed: seedWish('praise') })
+  check('被夸心愿：夸一次就达成', praise.act('praise').events.some((e) => e.type === 'wish' && e.id === 'praise'))
+
+  // 失败的轮次不算「干完 3 轮」
+  const failed = make({ seed: seedWish('turns3') })
+  for (let i = 0; i < 4; i++) failed.onTurn({ tokens: 1, outcome: 'error' })
+  check('失败的轮次不算进「干完 3 轮」', failed.snapshot().wish.done === false)
+
+  // 没做到：什么都不发生
+  const lazy = make({ seed: seedWish('stroke') })
+  lazy.act('poke')
+  const xpBefore = lazy.snapshot().xp
+  advance(24 * HOUR)
+  const next = lazy.snapshot()
+  check('心愿没做到：第二天换新心愿，羁绊值一分不少', next.xp === xpBefore && next.wish.done === false && next.wish.date !== DAY0, `${xpBefore} → ${next.xp}`)
+  check('「过期」的心愿不能在第二天被补做', (() => {
+    const b = make({ seed: seedWish('stroke') })
+    advance(24 * HOUR)
+    b.snapshot()
+    return !b.act('stroke').events.some((e) => e.id === 'stroke' && e.type === 'wish')
+  })())
+  check('坏数据：心愿 id 不认识就当没有，重新选一个', E.normalizeBond({ wish: { date: DAY0, id: 'nope', done: true } }).wish.id === '')
+}
+
+// ———— v0.6.2：表情包图鉴（猫咪后院式收集）————
+{
+  const CAT = Array.from({ length: 10 }, (_, i) => 's' + (i + 1))
+  const b = make({ stickers: CAT })
+  const s0 = b.snapshot()
+  check('图鉴：总数来自清单、一开始是 0', s0.album.total === 10 && s0.album.got === 0 && s0.album.ids.length === 0 && s0.album.milestones.length === ALBUM_MILESTONES.length)
+  check('图鉴：乱报的 id 一律拒绝', b.sticker('nope').why === 'unknown' && b.sticker('').why === 'unknown' && b.snapshot().album.got === 0)
+  const xp0 = b.snapshot().xp
+  const r = b.sticker('s1')
+  check('图鉴：第一次见到才收录，+1 羁绊', r.ok && r.isNew && r.snapshot.album.got === 1 && r.snapshot.xp >= xp0 + 1, `xp ${xp0} → ${r.snapshot.xp}`)
+  const again = b.sticker('s1')
+  check('图鉴：重复上报幂等（不再加分、不再有事件）', again.ok && again.isNew === false && again.events.length === 0 && again.snapshot.album.got === 1)
+  check('图鉴：第一个里程碑（总数的 10%）发奖一次', r.events.some((e) => e.type === 'album' && e.title === '图鉴学徒' && e.xp === 3))
+  check('图鉴：不算「有互动」（不重置衰减 / 离线计时）', (() => {
+    const c = make({ stickers: CAT })
+    c.sticker('s1')
+    return mem.bond.lastActiveDay === '' && mem.bond.lastSeenAt === 0
+  })())
+
+  const d = make({ stickers: CAT })
+  let milestones = []
+  let albumXp = 0
+  for (let i = 1; i <= 10; i++) {
+    const rr = d.sticker('s' + i)
+    milestones.push(...rr.events.filter((e) => e.type === 'album').map((e) => e.title))
+  }
+  const sd = d.snapshot()
+  check('图鉴：收满 10 张，四个里程碑各发一次', milestones.join(',') === '图鉴学徒,梗学家,梗百科,梗大全', milestones.join(','))
+  check('图鉴：集齐解锁「图鉴集齐」回忆，里程碑全部 done', sd.memories.find((m) => m.id === 'album-full').unlockedAt > 0 && sd.album.milestones.every((m) => m.done) && sd.album.got === 10)
+  check('图鉴：「新表情包」每日加分有上限（5），里程碑另算', (() => {
+    const e = make({ stickers: CAT })
+    e.sticker('s1')
+    const base = e.snapshot().today.sources.find((x) => x.id === 'album')
+    for (let i = 2; i <= 8; i++) e.sticker('s' + i)
+    const after = e.snapshot().today.sources.find((x) => x.id === 'album')
+    return base.used === 1 && after.used === 5 && after.cap === 5
+  })())
+  check('图鉴：总开关关掉就不收录', (() => {
+    const f = make({ stickers: CAT })
+    f.toggle(false)
+    return f.sticker('s1').why === 'off' && f.snapshot().album.got === 0
+  })())
+  check('图鉴：没有清单（没装表情包）= 总数 0，不出里程碑', (() => {
+    const g = make()
+    return g.snapshot().album.total === 0 && g.sticker('s1').why === 'unknown'
+  })())
+  check('图鉴：存盘再读回来，收录的还在；清单里没有的旧 id 不计数', (() => {
+    const h = make({ stickers: CAT })
+    h.sticker('s1')
+    h.sticker('s2')
+    const raw = JSON.parse(JSON.stringify(mem.bond))
+    raw.stickers.ghost = 123
+    const h2 = createBond({ read: () => raw, write: () => {}, clock: () => now, stickers: CAT })
+    return h2.snapshot().album.got === 2 && h2.snapshot().album.ids.includes('s1') && !h2.snapshot().album.ids.includes('ghost')
+  })())
+
+  // 「新表情包」心愿
+  const wish = make({ stickers: CAT, seed: seedWish('sticker') })
+  check('「新表情包」心愿：看到新图就达成', wish.sticker('s3').events.some((e) => e.type === 'wish' && e.id === 'sticker'))
+  const full = make({ stickers: ['x'] })
+  full.sticker('x')
+  const fullIds = []
+  for (let i = 0; i < 20; i++) {
+    advance(24 * HOUR)
+    fullIds.push(full.snapshot().wish.id)
+  }
+  check('图鉴集齐后不会再出「新表情包」心愿', !fullIds.includes('sticker'))
+}
+
+// ———— v0.6.2：每周回顾 ————
+{
+  const b = make()
+  for (let i = 0; i < 4; i++) b.onTurn({ tokens: 1000, outcome: 'completed' })
+  b.act('stroke')
+  check('本周统计：轮数 / 摸头 / 有互动的天数', (() => {
+    const w = b.snapshot().week
+    return w.key === '2026-10-12' && w.turns === 4 && w.strokes === 1 && w.days === 1
+  })())
+  check('这一周还没过完不给回顾', b.snapshot().recap === null)
+  advance(7 * 24 * HOUR)
+  const s = b.snapshot()
+  check('下周一：上周的统计存成回顾，本周清零', s.recap && s.recap.key === '2026-10-12' && s.recap.turns === 4 && s.week.turns === 0 && s.week.key === '2026-10-19', JSON.stringify(s.recap))
+  advance(14 * 24 * HOUR)
+  check('隔了几周没来：回顾还是最近一次有互动的那周（空周不会覆盖它）', b.snapshot().recap && b.snapshot().recap.turns === 4)
+
+  const few = make()
+  few.onTurn({ tokens: 1, outcome: 'completed' })
+  advance(7 * 24 * HOUR)
+  check('上周才跑了 1 轮：不特意回顾（至少 3 轮）', few.snapshot().recap === null)
+}
+
+// ———— v0.6.2：回忆册扩充 ————
+{
+  const s = make().snapshot()
+  check('回忆册：33 条（新增 2 条服务端 + 9 条共同经历）', s.memories.length === 33 && MEMORIES.length === 33, String(MEMORIES.length))
+  const b = make()
+  const ids = ['jail', 'this-is-fine', 'clown', 'beg-rice', 'jealous', 'long-think', 'ask-user', 'idle-seen', 'full-trust']
+  check('共同经历回忆：前端可以上报（白名单内、幂等）', ids.every((id) => b.memory(id).ok) && ids.every((id) => b.memory(id).events.length === 0))
+  check('只有宿主能判定的回忆，前端上报会被拒（first-wish / album-full）', b.memory('first-wish').why === 'forbidden' && b.memory('album-full').why === 'forbidden')
+  check('每条新回忆都写了解锁提示和旁白', MEMORIES.every((m) => m.hint && m.text && m.title))
+  check('回忆解锁各 +3 羁绊', (() => {
+    const c = make()
+    const x0 = c.snapshot().xp
+    c.memory('jail')
+    return c.snapshot().xp === x0 + 3
+  })())
 }
 
 // ———— 总开关 / 持久化 / brief ————

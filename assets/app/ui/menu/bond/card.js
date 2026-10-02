@@ -27,8 +27,20 @@ export function renderCard(snap) {
     .sort((a, b) => a - b)
     .find((d) => d > st.days)
   card.append(kv('连续陪伴', `${st.days} 天（最长 ${st.best} 天）`))
+  if (snap.firstSeenAt) card.append(kv('认识', `第 ${Math.floor((Date.now() - snap.firstSeenAt) / 86400000) + 1} 天`))
   if (nextReward) card.append($('div', 'dshp-hint', `再连续 ${nextReward - st.days} 天，额外 +${st.rewards[nextReward]} 羁绊值（周末休息不断档）`))
   if (snap.multiplier && snap.multiplier.x > 1) card.append(kv('今日倍率', `×${snap.multiplier.x}（${snap.multiplier.why}）`))
+
+  // 上周回顾（每周一结算；至少 3 轮才有）。「看见已经做了很多」，不是考勤表
+  const rc = snap.recap
+  if (rc) {
+    const bits = [`陪了 ${rc.days} 天`, `跑了 ${rc.turns} 轮`]
+    if (rc.feeds) bits.push(`投喂 ${rc.feeds} 次`)
+    if (rc.strokes) bits.push(`摸头 ${rc.strokes} 次`)
+    if (rc.wishes) bits.push(`心愿 ${rc.wishes} 个`)
+    if (rc.stickers) bits.push(`新图鉴 ${rc.stickers} 张`)
+    card.append($('div', 'dshp-hint', `上周（${rc.key} 起）：${bits.join(' · ')}。辛苦啦。`))
+  }
 
   if (snap.pending) {
     const story = STORIES[snap.pendingLevel]

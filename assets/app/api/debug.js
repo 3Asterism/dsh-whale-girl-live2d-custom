@@ -4,6 +4,7 @@ import { handleEvent } from '../behavior/events.js'
 import { idle } from '../behavior/idle.js'
 import { menuStatusLine, playAction } from '../behavior/menu-actions.js'
 import { PAGE, pageIntent } from '../behavior/page.js'
+import { routineTick } from '../behavior/routine.js'
 import { SOUL, checkLowBalance, soulTick } from '../behavior/soul.js'
 import { pokeState, pokeTier, pokeTierForGaps } from '../behavior/poke.js'
 import { resetEverything } from '../behavior/reset.js'
@@ -122,6 +123,7 @@ window.DSHPet = {
       STK.recent.clear()
       STK.lastAt = 0
     },
+    routine: () => routineTick(), // 测日常节律（心愿提一句 / 每周回顾）：手动跑一次
     lowBalance: () => checkLowBalance(), // 测「余额不足要米」：按当前 hud.data 判断一次
     idleTick: (ctx) => soulTick(ctx), // 测发呆搭话：手动喂一个 { typing, sleeping }
     soul: () => JSON.parse(JSON.stringify(SOUL, (k, v) => (k === 'timers' || k === 'timer' ? undefined : v))),

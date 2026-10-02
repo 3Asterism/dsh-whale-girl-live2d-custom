@@ -15,6 +15,19 @@
  * 选图规则（优先级、时长过滤、去重）在 ui/sticker-pick.js。
  */
 
+/**
+ * 好感等级放出：越亲近，她越敢用这些「黏人」的图（傲娇 → 黏人，等级只解锁内容、不锁任何功能）。
+ * 没写的图不限等级。低等级时这些图会被跳过，改用同一个池子里别的图 / 下一个候选池。
+ */
+export const MIN_LEVEL = {
+  love1: 3,
+  love2: 3,
+  hit_heart: 3,
+  notice_heart: 3,
+  loveletter: 5,
+  rose: 5,
+}
+
 /** 情绪（脸）→ 候选。键沿用 persona/moods.js 的 mood。 */
 export const MOOD_STICKER = {
   listening: ['nod'],
@@ -184,7 +197,7 @@ export const EVENT_STICKER = {
   'menu-tidy': ['work', 'note2'],
   'finish-abort': ['cry2', 'sweat'],
   'tool-error': ['stopped'],
-  // —— v0.6.1 新场景（behavior/soul.js）——
+  // —— v0.5.1 新场景（behavior/soul.js）——
   modelAway: ['nervous1', 'blank2'], // 换成别家的模型
   modelBack: ['arrive'], // 换回 DeepSeek
   effortUp: ['think_serious'],
@@ -200,6 +213,11 @@ export const EVENT_STICKER = {
   idleLong: ['blank1'],
   idleLonger: ['dance_calm'],
   lowBalanceBeg: ['beg'],
+  wishToday: ['expect2', 'hello2'],
+  wishDone: ['celebrate', 'cheer', 'score10'],
+  albumMilestone: ['notice_star', 'celebrate'],
+  albumFull: ['celebrate', 'cake'],
+  weekRecap: ['toast', 'note2', 'dance_calm'],
   thinkLong: ['think_serious'],
   thinkLonger: ['sweat'],
   failJail: ['jail'], // 又失败了：坐牢

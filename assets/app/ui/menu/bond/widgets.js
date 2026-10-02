@@ -17,7 +17,7 @@ export function section(id, title, sub, build) {
   head.append($('span', null, title))
   if (sub) head.append($('span', 'dshp-sec-sub', sub))
   const body = $('div')
-  build(body)
+  build(body, el) // el 也交出去：图鉴要等展开了才加载那些小 GIF
   el.append(head, body)
   return el
 }

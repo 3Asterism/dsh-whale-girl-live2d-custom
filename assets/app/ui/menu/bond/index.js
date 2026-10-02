@@ -7,11 +7,13 @@
 import { R, bond } from '../../../core/state.js'
 import { $ } from '../../../core/util.js'
 import { applySnapshot, fetchBond } from '../../../net/bond.js'
+import { renderAlbum } from './album.js'
 import { renderCard, renderState } from './card.js'
 import { renderFeed, renderToday } from './feed.js'
 import { renderRules } from './rules.js'
 import { renderLevels, renderStories } from './story.js'
 import { renderSwitches } from './switches.js'
+import { renderWish } from './wish.js'
 
 /** @param panes 面板容器；rerender 重画本页 */
 export function renderBondPane(panes, rerender) {
@@ -21,8 +23,10 @@ export function renderBondPane(panes, rerender) {
     refresh(rerender)
     return
   }
-  panes.append(renderCard(snap))
-  if (snap.enabled) panes.append(renderState(snap), renderFeed(snap), renderToday(snap), renderLevels(snap), renderStories(snap))
+  // 编排：先「她和你」（关系卡 → 今日心愿，每天回来最想看的两样，不折叠），
+  // 再是「每天会动的」（状态 / 投喂 / 今日进度），然后「慢慢攒的」（图鉴 / 等级 / 故事回忆），最后是设置与规则。
+  panes.append(renderCard(snap), renderWish(snap))
+  if (snap.enabled) panes.append(renderState(snap), renderFeed(snap), renderToday(snap), renderAlbum(snap), renderLevels(snap), renderStories(snap))
   panes.append(renderSwitches(snap, rerender), renderRules(snap))
   // 冷却倒计时、心情饱腹是惰性结算的：每次打开页面都拉一份新的（拿到后只在还停在本页时重画）
   if (!renderBondPane.fresh) refresh(rerender)

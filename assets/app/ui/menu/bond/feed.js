@@ -17,7 +17,10 @@ export function renderFeed(snap) {
       const tag = $('span', 'dshp-tag ' + (TASTE_CLASS[g.taste] || ''), g.tasteLabel)
       const eff = $('div', null, `${g.blurb}\n羁绊 ${signed(g.xp)} · 饱腹 ${signed(g.full)} · 心情 ${signed(g.mood)} · 要 ${g.cost} token${g.todayCount ? ` · 今天已吃 ${g.todayCount}（再吃减半）` : ''}`)
       eff.style.whiteSpace = 'pre-wrap'
-      info.append(name, tag, eff)
+      info.append(name, tag)
+      // 今日心愿正好是投喂这件：标出来（不强求）
+      if (snap.wish && !snap.wish.done && snap.wish.gift === g.id) info.append($('span', 'dshp-tag dshp-love', ' 她今天想要'))
+      info.append(eff)
       const btn = $('button', 'dshp-btn', '给她')
       const why = feeds.used >= feeds.cap ? '今天喂得够多啦（每天最多 ' + feeds.cap + ' 次）' : snap.tickets < g.cost ? 'token 不够' : ''
       if (why) {

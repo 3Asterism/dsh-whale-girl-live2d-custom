@@ -545,8 +545,8 @@ check('claim 永久型：只领一次', cl3.claimed === true && cl4.claimed === 
 check('claim 非法 key 被拒', (await post('/dsh-pet/claim', { key: '../x y', scope: 'day' })).claimed === false)
 // ———— 羁绊系统（规则的细节在 tools/test-bond.mjs 里单测，这里只验证 HTTP 适配与接线）————
 const bs0 = await (await fetch(BASE + '/dsh-pet/bond')).json()
-check('GET bond：完整快照（10 级 / 来源 / 礼物 / 22 条回忆的规则表）',
-  bs0.ok === true && bs0.levels.length === 10 && bs0.today.sources.length === 8 && bs0.gifts.length === 8 && bs0.memories.length === 22,
+check('GET bond：完整快照（10 级 / 9 个来源 / 礼物 / 33 条回忆的规则表）',
+  bs0.ok === true && bs0.levels.length === 10 && bs0.today.sources.length === 9 && bs0.gifts.length === 8 && bs0.memories.length === 33,
   `${bs0.levels.length}/${bs0.today.sources.length}/${bs0.gifts.length}/${bs0.memories.length}`)
 const ba1 = await post('/dsh-pet/bond/act', { kind: 'poke' })
 const ba2 = await post('/dsh-pet/bond/act', { kind: 'poke' })
@@ -568,6 +568,15 @@ check('bond/toggle：总开关关闭后加分失效', await (async () => {
   await post('/dsh-pet/bond/toggle', { enabled: true })
   return off.why === 'off'
 })())
+// v0.6.2：表情包图鉴 / 今日心愿 / 共同经历回忆
+const bsAlbum = await get("/dsh-pet/bond").then((r) => JSON.parse(r.buf.toString('utf8')))
+check('bond 快照：带今日心愿与图鉴（总数来自表情包清单）', bsAlbum.wish && bsAlbum.wish.text && bsAlbum.album && bsAlbum.album.total === Object.keys(stkJson.stickers).length && bsAlbum.album.got === 0, `${bsAlbum.album && bsAlbum.album.total} 张`)
+const st1 = await post('/dsh-pet/bond/sticker', { id: 'smile' })
+const st2 = await post('/dsh-pet/bond/sticker', { id: 'smile' })
+check('bond/sticker：第一次见到才收录（幂等），快照里图鉴 +1', st1.ok === true && st1.isNew === true && st1.snapshot.album.got === 1 && st2.isNew === false && st2.snapshot.album.got === 1)
+check('bond/sticker：清单里没有的 id / 空 id 被拒', (await post('/dsh-pet/bond/sticker', { id: 'definitely-not-a-sticker' })).why === 'unknown' && (await post('/dsh-pet/bond/sticker', {})).why === 'unknown')
+check('bond/memory：新的「共同经历」回忆前端可以报，宿主才能判定的（图鉴集齐 / 心愿）被拒',
+  (await post('/dsh-pet/bond/memory', { id: 'jail' })).ok === true && (await post('/dsh-pet/bond/memory', { id: 'album-full' })).ok === false && (await post('/dsh-pet/bond/memory', { id: 'first-wish' })).ok === false)
 check('bond：GET 之外的方法被拒', (await fetch(BASE + '/dsh-pet/bond', { method: 'POST', body: '{}' })).status === 405 && (await fetch(BASE + '/dsh-pet/bond/act')).status === 405)
 const hud5 = await (await fetch(BASE + '/dsh-pet/hud')).json()
 check('HUD stats 带等级 / 羁绊值 / 饭量 / 今日轮数', !!hud5.stats && hud5.stats.affinity >= 4 && hud5.stats.level >= 1 && typeof hud5.stats.levelName === 'string' && Number.isFinite(hud5.stats.riceToday) && Number.isFinite(hud5.stats.riceYesterday) && hud5.stats.turnsToday >= 1, JSON.stringify(hud5.stats))

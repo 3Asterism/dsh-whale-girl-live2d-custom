@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * smoke-stickers.mjs —— 表情包 + 「有灵魂」新场景，在真浏览器里的自检（v0.6.1）。
+ * smoke-stickers.mjs —— 表情包 + 「有灵魂」新场景，在真浏览器里的自检（v0.5.1）。
  *
  * 连接方式照抄 tools/smoke.mjs（浏览器级端点 + Target session + --no-sandbox）。
  *   node tools/preview-server.mjs &                 # 先起预览服务器
@@ -366,6 +366,106 @@ async function main() {
   check('工具调用的常驻气泡配图', !!tool1.sticker && /(type|work)\.gif/.test(tool1.sticker), tool1.sticker)
   check('常驻气泡配图有节流（20 秒内下一个工具不再换图）', !tool2.sticker)
   await ev(`DSHPet.sim({ t: 'turn-end', turn: 92, reason: 'completed', ms: 1, tokens: 0 }); 1`)
+
+  // ── O. 好感页：重新编排（关系卡 → 今日心愿 → 状态 / 投喂 / 今日进度 → 图鉴 → 等级 / 回忆 → 开关 / 规则）──
+  const today = await ev(`(() => { const d = new Date(); const p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) })()`)
+  await ev(`fetch('/__bond_seed', { method: 'POST', body: JSON.stringify({ firstSeenAt: Date.now() - 12 * 86400000, level: 3, xp: 120, wish: { date: ${JSON.stringify(today)}, id: 'praise', done: false, prev: '' } }) }).then((r) => r.json())`)
+  await ev('DSHPet.stickers.reset(); DSHPet.director.clear(); DSHPet.stickers.hide(); DSHPet.bond.refresh()')
+  await sleep(600)
+  // 她用出一张表情包 → 上报进图鉴
+  await ev(`DSHPet.stickers.show('jail'); 1`)
+  await sleep(900)
+  const album1 = JSON.parse(await ev('JSON.stringify(DSHPet.bond.snap().album)'))
+  check('她用出一张表情包就收进图鉴（上报宿主）', album1.got === 1 && album1.ids.includes('jail') && album1.total >= 60, `${album1.got}/${album1.total}`)
+  await ev(`DSHPet.stickers.show('jail'); 1`)
+  await sleep(500)
+  check('同一张再用不重复收录', JSON.parse(await ev('JSON.stringify(DSHPet.bond.snap().album)')).got === 1)
+
+  // 打开菜单 →「好感」页
+  await ev(`DSHPet.stickers.hide(); document.querySelectorAll('.dshp-dock .dshp-btn')[1].click(); 1`)
+  await sleep(300)
+  await ev(`[...document.querySelectorAll('.dshp-tab-btn')].find((b) => b.textContent.includes('好感')).click(); 1`)
+  await sleep(1200)
+  const page = JSON.parse(await ev(`(() => {
+    const panes = document.querySelector('.dshp-panes')
+    const titles = [...panes.querySelectorAll('details.dshp-sec > summary > span:first-child')].map((x) => x.textContent)
+    const wish = panes.querySelector('.dshp-wish')
+    const kids = [...panes.children].map((c) => (c.classList.contains('dshp-wish') ? 'WISH' : c.tagName === 'DETAILS' ? 'SEC:' + c.querySelector('summary span').textContent : c.className.split(' ')[0] || c.tagName))
+    return JSON.stringify({ titles, wishText: wish ? wish.textContent : '', kids, hasCard: !!panes.querySelector('.dshp-kv') })
+  })()`))
+  const want = ['她的状态', '投喂', '今日进度', '表情包图鉴', '等级一览', '故事 · 回忆', '互动开关', '规则说明']
+  check('好感页：分区顺序 = 她的状态 / 投喂 / 今日进度 / 表情包图鉴 / 等级 / 回忆 / 开关 / 规则', JSON.stringify(page.titles) === JSON.stringify(want), page.titles.join(' › '))
+  check('好感页：「今日心愿」是不折叠的卡片，紧跟在关系卡后面、折叠分区前面', page.wishText.includes('今天想听主人夸一句') && page.kids.indexOf('WISH') >= 0 && page.kids.indexOf('WISH') < page.kids.findIndex((k) => k.startsWith('SEC:')), page.kids.slice(0, 4).join(' | '))
+  await shoot('08-bond-top')
+  await ev(`[...document.querySelectorAll('.dshp-panes details.dshp-sec')].find((d) => d.querySelector('summary span').textContent === '表情包图鉴').open = true; 1`)
+  await sleep(500)
+  const tiles = JSON.parse(await ev(`(() => { const g = document.querySelector('.dshp-album'); return JSON.stringify({ all: g.children.length, got: g.querySelectorAll('button.dshp-album-tile').length, locked: g.querySelectorAll('.dshp-locked').length, firstIsGif: !!g.querySelector('button img[src*=".gif"]') }) })()`))
+  check('图鉴：展开后才加载图块；已收录的是动图按钮，没见过的只露几个「？」+ 一块「+N」（不会撑成一面墙）', tiles.got === 1 && tiles.locked === 9 && tiles.all === 10 && tiles.firstIsGif, JSON.stringify(tiles))
+  await ev(`document.querySelector('.dshp-album').scrollIntoView({ block: 'center' }); 1`)
+  await sleep(300)
+  await shoot('09-bond-album')
+  await ev(`document.querySelector('.dshp-album button.dshp-album-tile').click(); 1`)
+  const cap = await ev(`document.querySelector('.dshp-album-cap').textContent`)
+  check('图鉴：点一张已收录的图，下面显示它的梗', cap.includes('坐牢') && cap.includes('又失败'), cap)
+  await ev(`document.dispatchEvent(new PointerEvent('pointerdown', { clientX: 2, clientY: 2, bubbles: true })); 1`) // 点别处收起面板
+  await sleep(300)
+
+  // 今日心愿：夸她一句 → 达成（演出 + 奖励写在脚注里）
+  await ev('DSHPet.director.clear(); DSHPet.stickers.hide(); 1')
+  await ev(`DSHPet.bond.act('praise'); 1`)
+  await sleep(900)
+  const wishDone = JSON.parse(await ev(`JSON.stringify({ ok: DSHPet.director.trace().some((e) => e.id === 'wish-done' && e.ok), snap: DSHPet.bond.snap().wish, foot: document.querySelector('.dshp-foot').textContent })`))
+  check('今日心愿达成：她庆祝一下，奖励公开写在脚注里', wishDone.ok && wishDone.snap.done === true && wishDone.foot.includes('心愿达成') && /羁绊 \+\d+/.test(wishDone.foot), wishDone.foot)
+
+  // ── O2. 主动开口：每天第一次空闲时提一句心愿；每周回顾（白天空闲时一次）──
+  await ev(`DSHPet.sim({ t: 'turn-end', turn: 96, reason: 'completed', ms: 1, tokens: 0 }); 1`)
+  await sleep(12500) // 上一步心愿达成后排队的「小心愿」回忆要 4.6s 后弹、演 7s，等它演完，日常节律才不会让路
+  await ev(`fetch('/__bond_seed', { method: 'POST', body: JSON.stringify({ firstSeenAt: Date.now() - 12 * 86400000, wish: { date: ${JSON.stringify(today)}, id: 'stroke', done: false, prev: '' } }) }).then((r) => r.json())`)
+  await ev(`fetch('/__claims_reset').then((r) => r.json())`) // 页面自己的 20 秒定时器可能已经把今天的名额领走了
+  await ev('DSHPet.bond.refresh(); DSHPet.stickers.reset(); DSHPet.director.clear(); DSHPet.stickers.hide(); 1')
+  await sleep(500)
+  const wishSay = await ev(`(async () => { await DSHPet.stickers.routine(); await new Promise((r) => setTimeout(r, 200)); return JSON.stringify({ ok: DSHPet.director.trace().some((e) => e.id === 'routine-wish' && e.ok), text: DSHPet.stickers.state().text }) })()`).then(JSON.parse)
+  check('每天第一次空闲时，她悄悄提一句今日心愿（不强求）', wishSay.ok && wishSay.text.includes('今天想被摸摸头'), wishSay.text)
+  const wishAgain = await ev(`(async () => { DSHPet.director.clear(); DSHPet.stickers.hide(); await DSHPet.stickers.routine(); await new Promise((r) => setTimeout(r, 200)); return DSHPet.director.trace().some((e) => e.id === 'routine-wish' && e.ok) })()`)
+  check('心愿一天只提一次', wishAgain === false)
+
+  const hourNow = await ev('new Date().getHours()')
+  await ev(`fetch('/__bond_seed', { method: 'POST', body: JSON.stringify({ firstSeenAt: Date.now() - 40 * 86400000, wish: { date: ${JSON.stringify(today)}, id: 'stroke', done: true, prev: '' }, lastWeek: { key: '2026-09-21', turns: 7, days: 4, feeds: 2, strokes: 3, praise: 1, wishes: 2, stickers: 5 } }) }).then((r) => r.json())`)
+  await ev(`fetch('/__claims_reset').then((r) => r.json())`)
+  await ev('DSHPet.bond.refresh(); DSHPet.stickers.reset(); DSHPet.director.clear(); DSHPet.stickers.hide(); 1')
+  await sleep(500)
+  const recap = await ev(`(async () => { await DSHPet.stickers.routine(); await new Promise((r) => setTimeout(r, 200)); return JSON.stringify({ ok: DSHPet.director.trace().some((e) => e.id === 'routine-recap' && e.ok), text: DSHPet.stickers.state().text }) })()`).then(JSON.parse)
+  if (hourNow >= 9 && hourNow < 21) check('每周回顾：白天空闲时讲一次，带上上周的轮数 / 天数', recap.ok && /7/.test(recap.text) && /4/.test(recap.text), recap.text)
+  else check('每周回顾：夜里 / 早上不开口（现在是 ' + hourNow + ' 点）', recap.ok === false)
+  const recapAgain = await ev(`(async () => { DSHPet.director.clear(); DSHPet.stickers.hide(); await DSHPet.stickers.routine(); await new Promise((r) => setTimeout(r, 200)); return DSHPet.director.trace().some((e) => e.id === 'routine-recap' && e.ok) })()`)
+  check('每周回顾一周只讲一次', recapAgain === false)
+
+  // ── N. 工具栏：只点击（没有任何 pointermove、没有拖动）也要亮出四个按钮 ──
+  await ev(`DSHPet.sim({ t: 'turn-end', turn: 95, reason: 'completed', ms: 1, tokens: 0 }); 1`)
+  await sleep(300)
+  const dock = JSON.parse(await ev(`(async () => {
+    const root = document.getElementById('dsh-live2d-pet')
+    root.classList.remove('dshp-hover', 'dshp-open')
+    const sr = document.querySelector('#dsh-live2d-pet .dshp-stage').getBoundingClientRect()
+    const x = sr.left + sr.width / 2, y = sr.top + sr.height / 2
+    const fire = (t, px, py) => document.dispatchEvent(new PointerEvent(t, { clientX: px, clientY: py, button: 0, buttons: t === 'pointerup' || t === 'pointermove' ? 0 : 1, bubbles: true, cancelable: true }))
+    const before = root.classList.contains('dshp-hover')
+    fire('pointerdown', x, y)
+    const afterDown = root.classList.contains('dshp-hover')
+    fire('pointerup', x, y)
+    await new Promise((r) => setTimeout(r, 3500))
+    const stillShown = root.classList.contains('dshp-hover')
+    const opacity = getComputedStyle(root.querySelector('.dshp-dock')).opacity
+    const buttons = root.querySelectorAll('.dshp-dock .dshp-btn').length
+    // 鼠标移开：钉住的时间到了就自己收
+    fire('pointermove', 2, 2)
+    await new Promise((r) => setTimeout(r, 7500))
+    const hiddenAfter = !root.classList.contains('dshp-hover')
+    return JSON.stringify({ before, afterDown, stillShown, opacity, buttons, hiddenAfter })
+  })()`))
+  check('点击（按下）就亮出四个按钮，不用拖', dock.before === false && dock.afterDown === true && dock.buttons === 4, JSON.stringify(dock))
+  check('点完留几秒，鼠标还在她身上就不收', dock.stillShown === true && Number(dock.opacity) > 0.9, `opacity ${dock.opacity}`)
+  check('鼠标移开后自己收回去', dock.hiddenAfter === true)
 
   const logs = (await ev('(window.__dshpLogs||[]).slice(0,20)')) || []
   const errors = logs.filter((l) => l.indexOf('E:') === 0 || l.indexOf('X:') === 0)

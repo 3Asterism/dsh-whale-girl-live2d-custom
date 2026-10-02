@@ -21,6 +21,9 @@ export function renderRules(snap) {
     if (r.awayMinMs) lines.push(`【离线小事件】你离开超过 ${fmtMs(r.awayMinMs)} 再回来，她会讲一件「你不在时做的事」，顺手捡到 0–${r.awayMaxTickets} 个 token。`)
     if (r.companionEveryMs) lines.push(`【陪伴】连续在干活，每满 ${fmtMs(r.companionEveryMs)} 算一次陪伴。`)
     if (r.memoryXp) lines.push(`【回忆】每解锁一条回忆 +${r.memoryXp}。`)
+    if (r.wish) lines.push(`【今日心愿】每天一个，按日期确定、不重样；做到 羁绊 +${r.wish.xp} · 心情 +${r.wish.mood} · token +${r.wish.tickets}。没做到不扣任何东西，也不会「补做」。token 不够时不会出投喂类心愿。`)
+    lines.push('【表情包图鉴】她用出过的每一张表情包都会收录；每天前几张新图各 +1 羁绊，里程碑一次性奖励。「黏人」的几张（爱心、情书、玫瑰）要到一定好感等级她才好意思用。')
+    if (r.recapMinTurns) lines.push(`【每周回顾】每周一结算上一周；上周至少跑了 ${r.recapMinTurns} 轮，她才会在白天空闲时讲一次（每周最多一次，不催）。`)
     for (const t of lines) body.append($('div', 'dshp-hint', t))
 
     body.append(kv('当前衰减', snap.decay.active ? `已 ${snap.decay.idleWorkdays} 个工作日没互动` : '不会衰减（Lv.' + d.stopAtLevel + '+）'))

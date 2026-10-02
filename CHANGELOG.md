@@ -1,5 +1,39 @@
 # 更新日志 / Changelog
 
+## 0.6.2 — 2026-10-02
+
+> **English summary**: bond system polish, informed by mature companion/collection games (Neko Atsume, Fire Emblem
+> supports, Hades keepsakes, Blue Archive's memorial hall, and research on guilt-free virtual pets). New: a daily wish
+> (reward if done, nothing at all if not), a sticker album with milestones, 11 shared-experience memories, a weekly
+> recap, and stickers that unlock with bond level. The Bond tab was re-laid-out (relationship card → daily wish →
+> daily stuff → collections → settings). Also: clicking her now reveals the four toolbar buttons (it used to need a drag).
+
+### 改：点她一下就亮出四个按钮
+
+原来只有「鼠标在她身上移动」（悬停）才会亮出说话 / 菜单 / 收起 / 打开 DSH 四个按钮，桌面壳点击穿透、触屏这些收不到悬停的场景下只有按住拖动才会碰巧触发。
+现在**按下、点击、拖完**都会亮出来并停几秒；鼠标还在她身上 / 按钮上就继续留着，移开后自己收。
+
+### 新：好感系统打磨
+
+- **今日心愿**：每天一个小心愿（想吃白饭 / 想被摸头 / 想陪你干完 3 轮 / 想让你看一张新表情包……），按日期确定、不重样；做到有小奖励，**做不到什么都不发生**（不扣、不补、没有连续打卡）。
+  token 不够时不会出投喂类心愿。每天第一次空闲时她会悄悄提一句。
+- **表情包图鉴**：她用出过的每张表情包都收进图鉴（宿主按清单校验、幂等）；每天前 5 张新图各 +1 羁绊，10% / 30% / 60% / 100% 四个里程碑；点开能看那张图的梗。
+  收录不算「有互动」，不会重置衰减 / 离线计时。
+- **11 条共同经历回忆**（火焰纹章式）：一起坐过牢、一切都好、小丑竟是我自己、要米、才没吃醋、想了好久、有话问你、被看见发呆、全部交给人家，以及小心愿、图鉴集齐。回忆总数 22 → 33。
+- **每周回顾**：每周一结算上一周，至少 3 轮才会在白天空闲时讲一次，只讲「已经做了多少」。
+- **好感放出**：爱心系的表情包要 Lv.3，情书 / 玫瑰要 Lv.5（傲娇 → 黏人）。
+- **好感页重新编排**：关系卡 → 今日心愿（不折叠）→ 状态 / 投喂 / 今日进度 → 表情包图鉴 → 等级 / 故事·回忆 → 互动开关 / 规则。回忆最新的在最上面，没解锁的收进折叠；关系卡多了「认识第 N 天」和上周回顾一行。
+- 设计依据与新查的同类游戏见 `docs/好感系统设计.md` 第一、十一节。
+
+### 修
+
+- 同一批里有好几件事（比如「心愿达成」同时解锁「小心愿」回忆）以前会同时抢气泡、后来的把前一个的庆祝顶掉；现在依次演。
+- 「共同经历」回忆在她那句台词出现后晚几秒才弹，不再把台词顶掉。
+
+### 测试
+
+`tools/test-bond.mjs` 120 项（新增心愿 / 图鉴 / 周回顾 / 回忆）、`tools/test-stickers.mjs` 36 项（含好感放出）、`tools/test-host.mjs` 223 项、`tools/smoke-stickers.mjs` 45 项（真浏览器：工具栏点击亮出、好感页编排、图鉴、心愿达成）。
+
 ## 0.6.1 — 2026-10-02
 
 > **English summary**: meme stickers and more soul. Her lines now carry a small GIF (92 stickers from 赤风RED's

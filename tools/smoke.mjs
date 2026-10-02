@@ -357,7 +357,7 @@ async function main() {
         return JSON.stringify({secs:panes().querySelectorAll('details.dshp-sec').length, card:t.indexOf('Lv.1 初识')>=0,
           rules:t.indexOf('没有隐性设定')>=0&&t.indexOf('绝不掉级')>=0, today:t.indexOf('每日首见')>=0, forbidden:t.indexOf('体重秤')>=0&&t.indexOf('禁区')>=0,
           switches:t.indexOf('羁绊系统：开')>=0&&t.indexOf('话痨度：')>=0&&t.indexOf('番茄钟')>=0, tickets:window.DSHPet.bond.snap().tickets})`)
-      check('好感页有 7 个折叠分区（状态/投喂/今日进度/等级/故事回忆/开关/规则）', fresh.secs === 7, String(fresh.secs))
+      check('好感页有 8 个折叠分区（状态/投喂/今日进度/表情包图鉴/等级/故事回忆/开关/规则），关系卡后面还有不折叠的「今日心愿」', fresh.secs === 8, String(fresh.secs))
       check('好感页关系卡显示等级与名称', fresh.card === true)
       check('好感页把规则摊开（衰减、倍率、token……不掉级）', fresh.rules === true)
       check('好感页列出每个来源的今日进度、礼物喜好含「禁区」', fresh.today === true && fresh.forbidden === true)
@@ -371,8 +371,10 @@ async function main() {
       check('设置页不再放话痨度 / 应景装扮 / 番茄钟（搬进好感页），并指路', !stg.chatty && !stg.flair && !stg.pomo && stg.pointer, JSON.stringify(stg))
 
       // 3) 投喂：点「白饭」的按钮，扣 1 个 token、面板收起让位给她的反应
+      // 种子里把今日心愿固定成与投喂无关的（否则按日期选出「想吃白饭」时，喂白饭会顺手领到心愿奖励的 +1 token，数字就对不上了）
       const fed = await run(`
-        await seed({}); await window.DSHPet.bond.refresh(); await openBond();
+        var dd=new Date(),pp=function(n){return String(n).padStart(2,'0')};
+        await seed({wish:{date:dd.getFullYear()+'-'+pp(dd.getMonth()+1)+'-'+pp(dd.getDate()),id:'stroke',done:true,prev:''}}); await window.DSHPet.bond.refresh(); await openBond();
         var rows=panes().querySelectorAll('.dshp-gift'); var row=null;
         for(var i=0;i<rows.length;i++) if(rows[i].textContent.indexOf('白饭')>=0) row=rows[i];
         row.querySelector('button').click(); await sl(700);

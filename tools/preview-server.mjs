@@ -23,7 +23,15 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const { createBond } = await import(pathToFileURL(path.join(HERE, '..', 'lib', 'bond', 'index.js')).href)
 const bondMem = { raw: undefined }
 let bond = null
-const makeBond = () => (bond = createBond({ read: () => bondMem.raw, write: (b) => (bondMem.raw = JSON.parse(JSON.stringify(b))) }))
+// 图鉴的全集：assets/stickers/manifest.json 里的 id（和真机宿主一样）
+const stickerIds = (() => {
+  try {
+    return Object.keys(JSON.parse(fs.readFileSync(path.join(path.resolve(HERE, '..'), 'assets', 'stickers', 'manifest.json'), 'utf8')).stickers || {})
+  } catch (e) {
+    return []
+  }
+})()
+const makeBond = () => (bond = createBond({ read: () => bondMem.raw, write: (b) => (bondMem.raw = JSON.parse(JSON.stringify(b))), stickers: stickerIds }))
 makeBond()
 const previewClaims = new Map()
 const ROOT = path.resolve(HERE, '..')
@@ -222,6 +230,7 @@ const server = http.createServer((req, res) => {
       if (act === 'feed') return out(bond.feed(String(b.item || '')))
       if (act === 'story') return out(bond.story(Number(b.level)))
       if (act === 'memory') return out(bond.memory(String(b.id || '')))
+      if (act === 'sticker') return out(bond.sticker(String(b.id || '')))
       if (act === 'away') return out(bond.away())
       if (act === 'toggle') return out(bond.toggle(b.enabled !== false))
       return send(res, 404, MIME['.json'], '{"ok":false}')
@@ -234,6 +243,11 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(rel).toLowerCase()
     if (rel.includes('..') || (ext !== '.gif' && ext !== '.json')) return send(res, 403, 'text/plain; charset=utf-8', 'forbidden')
     return serveFile(res, path.join(ASSETS, 'stickers', rel))
+  }
+  // 测试用：清掉「每天一次 / 永久一次」的领取记录（页面自己的定时器可能已经把名额领走了）
+  if (url === '/__claims_reset') {
+    previewClaims.clear()
+    return send(res, 200, MIME['.json'], '{"ok":true}')
   }
   if (url === '/__balance') {
     const v = Number(new URL(req.url, 'http://x').searchParams.get('v'))

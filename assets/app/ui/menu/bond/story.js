@@ -39,20 +39,31 @@ export function renderStories(snap) {
       body.append(row)
     }
 
-    body.append($('div', 'dshp-hint', '回忆（做到对应的事就会解锁，每条 +羁绊值，只有一次）：'))
-    for (const m of snap.memories) {
-      if (m.unlockedAt) {
-        const d = $('details')
-        const s = $('summary', null, m.title)
-        s.style.cursor = 'pointer'
-        s.style.fontSize = '11px'
-        d.append(s, $('div', 'dshp-hint', m.text))
-        body.append(d)
-      } else {
+    body.append($('div', 'dshp-hint', '回忆（做到对应的事就会解锁，每条 +羁绊值，只有一次；最新的在最上面）：'))
+    const unlocked = snap.memories.filter((m) => m.unlockedAt).sort((a, b) => b.unlockedAt - a.unlockedAt)
+    for (const m of unlocked) {
+      const d = $('details')
+      const s = $('summary', null, m.title)
+      s.style.cursor = 'pointer'
+      s.style.fontSize = '11px'
+      d.append(s, $('div', 'dshp-hint', m.text))
+      body.append(d)
+    }
+    const locked = snap.memories.filter((m) => !m.unlockedAt)
+    if (locked.length) {
+      // 没解锁的收进一个折叠：条件公开（不是「？？？」黑箱），但不占满整页
+      const d = $('details')
+      const s = $('summary', null, `还没解锁的回忆（${locked.length} 条，解锁条件都在这里）`)
+      s.style.cursor = 'pointer'
+      s.style.fontSize = '11px'
+      s.style.opacity = '.7'
+      d.append(s)
+      for (const m of locked) {
         const row = $('div', 'dshp-tr dshp-lock')
         row.append($('b', null, '？？？'), $('em', null, m.hint))
-        body.append(row)
+        d.append(row)
       }
+      body.append(d)
     }
   })
 }

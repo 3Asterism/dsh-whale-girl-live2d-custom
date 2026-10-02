@@ -4,6 +4,7 @@
  "stickers": {
   "smile": {
    "file": "smile.gif",
+   "name": "笑",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -11,6 +12,7 @@
   },
   "smile_point": {
    "file": "smile_point.gif",
+   "name": "笑(指)",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -18,6 +20,7 @@
   },
   "thumbs_up": {
    "file": "thumbs_up.gif",
+   "name": "点赞",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -25,6 +28,7 @@
   },
   "thumbs_down": {
    "file": "thumbs_down.gif",
+   "name": "反向点赞",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -32,6 +36,7 @@
   },
   "nod": {
    "file": "nod.gif",
+   "name": "点头",
    "ms": 800,
    "w": 96,
    "h": 96,
@@ -39,6 +44,7 @@
   },
   "celebrate": {
    "file": "celebrate.gif",
+   "name": "庆祝",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -46,6 +52,7 @@
   },
   "cheer": {
    "file": "cheer.gif",
+   "name": "加油",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -53,6 +60,7 @@
   },
   "toast": {
    "file": "toast.gif",
+   "name": "干杯",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -60,6 +68,7 @@
   },
   "score10": {
    "file": "score10.gif",
+   "name": "得分(10分)",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -67,6 +76,7 @@
   },
   "score0": {
    "file": "score0.gif",
+   "name": "得分(0分)",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -74,6 +84,7 @@
   },
   "expect2": {
    "file": "expect2.gif",
+   "name": "期待 2",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -81,6 +92,7 @@
   },
   "crave_fork": {
    "file": "crave_fork.gif",
+   "name": "馋(刀叉)",
    "ms": 640,
    "w": 96,
    "h": 96,
@@ -88,6 +100,7 @@
   },
   "gift2": {
    "file": "gift2.gif",
+   "name": "礼物 2",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -95,6 +108,7 @@
   },
   "glowstick": {
    "file": "glowstick.gif",
+   "name": "荧光棒 2",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -102,6 +116,7 @@
   },
   "magic": {
    "file": "magic.gif",
+   "name": "魔法",
    "ms": 640,
    "w": 96,
    "h": 96,
@@ -109,6 +124,7 @@
   },
   "love1": {
    "file": "love1.gif",
+   "name": "爱心 1",
    "ms": 2160,
    "w": 96,
    "h": 96,
@@ -116,6 +132,7 @@
   },
   "love2": {
    "file": "love2.gif",
+   "name": "爱心 2",
    "ms": 2120,
    "w": 96,
    "h": 96,
@@ -123,6 +140,7 @@
   },
   "loveletter": {
    "file": "loveletter.gif",
+   "name": "情书",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -130,6 +148,7 @@
   },
   "rose": {
    "file": "rose.gif",
+   "name": "玫瑰",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -137,6 +156,7 @@
   },
   "hit_heart": {
    "file": "hit_heart.gif",
+   "name": "被击中(爱心)",
    "ms": 800,
    "w": 96,
    "h": 96,
@@ -144,6 +164,7 @@
   },
   "shy1": {
    "file": "shy1.gif",
+   "name": "害羞 1",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -151,6 +172,7 @@
   },
   "shy2": {
    "file": "shy2.gif",
+   "name": "害羞 2",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -158,6 +180,7 @@
   },
   "lick": {
    "file": "lick.gif",
+   "name": "舔舔",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -165,6 +188,7 @@
   },
   "headpat": {
    "file": "headpat.gif",
+   "name": "摸头",
    "ms": 640,
    "w": 96,
    "h": 96,
@@ -172,6 +196,7 @@
   },
   "angry": {
    "file": "angry.gif",
+   "name": "生气",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -179,6 +204,7 @@
   },
   "slipper": {
    "file": "slipper.gif",
+   "name": "拖鞋 1",
    "ms": 400,
    "w": 96,
    "h": 96,
@@ -186,6 +212,7 @@
   },
   "hit_slipper": {
    "file": "hit_slipper.gif",
+   "name": "被击中(拖鞋)",
    "ms": 800,
    "w": 96,
    "h": 96,
@@ -193,6 +220,7 @@
   },
   "type_annoyed": {
    "file": "type_annoyed.gif",
+   "name": "打字(恼怒)",
    "ms": 320,
    "w": 96,
    "h": 96,
@@ -200,6 +228,7 @@
   },
   "work_angry": {
    "file": "work_angry.gif",
+   "name": "工作(生气)",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -207,6 +236,7 @@
   },
   "shades_loop": {
    "file": "shades_loop.gif",
+   "name": "墨镜循环",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -214,6 +244,7 @@
   },
   "shades_glint": {
    "file": "shades_glint.gif",
+   "name": "墨镜反光",
    "ms": 1640,
    "w": 96,
    "h": 96,
@@ -221,6 +252,7 @@
   },
   "shades_off": {
    "file": "shades_off.gif",
+   "name": "摘掉墨镜",
    "ms": 1920,
    "w": 96,
    "h": 96,
@@ -228,6 +260,7 @@
   },
   "shades_pixel": {
    "file": "shades_pixel.gif",
+   "name": "像素墨镜反光",
    "ms": 1640,
    "w": 96,
    "h": 96,
@@ -235,6 +268,7 @@
   },
   "cry1": {
    "file": "cry1.gif",
+   "name": "哭 1",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -242,6 +276,7 @@
   },
   "cry2": {
    "file": "cry2.gif",
+   "name": "哭 2",
    "ms": 1920,
    "w": 96,
    "h": 96,
@@ -249,6 +284,7 @@
   },
   "selfcomfort": {
    "file": "selfcomfort.gif",
+   "name": "自我安慰",
    "ms": 1840,
    "w": 96,
    "h": 96,
@@ -256,6 +292,7 @@
   },
   "sweat": {
    "file": "sweat.gif",
+   "name": "汗",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -263,6 +300,7 @@
   },
   "nervous1": {
    "file": "nervous1.gif",
+   "name": "紧张 1",
    "ms": 1200,
    "w": 96,
    "h": 96,
@@ -270,6 +308,7 @@
   },
   "nervous2": {
    "file": "nervous2.gif",
+   "name": "紧张 2",
    "ms": 1200,
    "w": 96,
    "h": 96,
@@ -277,6 +316,7 @@
   },
   "scared": {
    "file": "scared.gif",
+   "name": "惊吓",
    "ms": 1120,
    "w": 96,
    "h": 96,
@@ -284,6 +324,7 @@
   },
   "exclaim": {
    "file": "exclaim.gif",
+   "name": "叹号",
    "ms": 1120,
    "w": 96,
    "h": 96,
@@ -291,6 +332,7 @@
   },
   "dizzy": {
    "file": "dizzy.gif",
+   "name": "头晕",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -298,6 +340,7 @@
   },
   "question": {
    "file": "question.gif",
+   "name": "问号",
    "ms": 1120,
    "w": 96,
    "h": 96,
@@ -305,6 +348,7 @@
   },
   "blank1": {
    "file": "blank1.gif",
+   "name": "呆 1",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -312,6 +356,7 @@
   },
   "blank2": {
    "file": "blank2.gif",
+   "name": "呆 2",
    "ms": 1640,
    "w": 96,
    "h": 96,
@@ -319,6 +364,7 @@
   },
   "thinking": {
    "file": "thinking.gif",
+   "name": "正在思考",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -326,6 +372,7 @@
   },
   "think_confident": {
    "file": "think_confident.gif",
+   "name": "思考(自信地)",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -333,6 +380,7 @@
   },
   "think_serious": {
    "file": "think_serious.gif",
+   "name": "思考(认真地)",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -340,6 +388,7 @@
   },
   "work_nap": {
    "file": "work_nap.gif",
+   "name": "工作(小睡)",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -347,6 +396,7 @@
   },
   "dead": {
    "file": "dead.gif",
+   "name": "死亡",
    "ms": 1360,
    "w": 96,
    "h": 96,
@@ -354,6 +404,7 @@
   },
   "trash": {
    "file": "trash.gif",
+   "name": "垃圾桶",
    "ms": 160,
    "w": 96,
    "h": 96,
@@ -361,6 +412,7 @@
   },
   "type": {
    "file": "type.gif",
+   "name": "打字(普通)",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -368,6 +420,7 @@
   },
   "work": {
    "file": "work.gif",
+   "name": "工作(普通)",
    "ms": 640,
    "w": 96,
    "h": 96,
@@ -375,6 +428,7 @@
   },
   "work_tired": {
    "file": "work_tired.gif",
+   "name": "工作(疲倦)",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -382,6 +436,7 @@
   },
   "note2": {
    "file": "note2.gif",
+   "name": "记录 2",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -389,6 +444,7 @@
   },
   "draw": {
    "file": "draw.gif",
+   "name": "画板",
    "ms": 800,
    "w": 96,
    "h": 96,
@@ -396,6 +452,7 @@
   },
   "game": {
    "file": "game.gif",
+   "name": "打游戏",
    "ms": 800,
    "w": 96,
    "h": 96,
@@ -403,6 +460,7 @@
   },
   "drive": {
    "file": "drive.gif",
+   "name": "驾驶",
    "ms": 520,
    "w": 96,
    "h": 96,
@@ -410,6 +468,7 @@
   },
   "jail": {
    "file": "jail.gif",
+   "name": "坐牢 1",
    "ms": 1240,
    "w": 96,
    "h": 96,
@@ -418,6 +477,7 @@
   },
   "fine1": {
    "file": "fine1.gif",
+   "name": "一切都好 1",
    "ms": 1600,
    "w": 96,
    "h": 96,
@@ -426,6 +486,7 @@
   },
   "fine2": {
    "file": "fine2.gif",
+   "name": "一切都好 2",
    "ms": 1600,
    "w": 96,
    "h": 96,
@@ -434,6 +495,7 @@
   },
   "stopped": {
    "file": "stopped.gif",
+   "name": "停止工作",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -441,6 +503,7 @@
   },
   "clown1": {
    "file": "clown1.gif",
+   "name": "小丑 1",
    "ms": 2320,
    "w": 96,
    "h": 96,
@@ -448,6 +511,7 @@
   },
   "clown2": {
    "file": "clown2.gif",
+   "name": "小丑 2",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -455,6 +519,7 @@
   },
   "beg": {
    "file": "beg.gif",
+   "name": "要米",
    "ms": 1640,
    "w": 96,
    "h": 96,
@@ -462,6 +527,7 @@
   },
   "slack_easy": {
    "file": "slack_easy.gif",
+   "name": "带薪拉屎(简单模式)",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -469,6 +535,7 @@
   },
   "slack_hard": {
    "file": "slack_hard.gif",
+   "name": "带薪拉屎(困难模式)",
    "ms": 2160,
    "w": 96,
    "h": 96,
@@ -476,6 +543,7 @@
   },
   "dance_calm": {
    "file": "dance_calm.gif",
+   "name": "跳舞(低皮质醇)",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -483,6 +551,7 @@
   },
   "uno": {
    "file": "uno.gif",
+   "name": "反转",
    "ms": 1360,
    "w": 96,
    "h": 96,
@@ -490,6 +559,7 @@
   },
   "idea": {
    "file": "idea.gif",
+   "name": "主意",
    "ms": 1320,
    "w": 96,
    "h": 96,
@@ -497,6 +567,7 @@
   },
   "takemoney": {
    "file": "takemoney.gif",
+   "name": "拿走我的钱",
    "ms": 1120,
    "w": 96,
    "h": 96,
@@ -504,6 +575,7 @@
   },
   "swipe": {
    "file": "swipe.gif",
+   "name": "刷卡",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -511,6 +583,7 @@
   },
   "money": {
    "file": "money.gif",
+   "name": "钱",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -518,6 +591,7 @@
   },
   "redpacket1": {
    "file": "redpacket1.gif",
+   "name": "红包 1",
    "ms": 960,
    "w": 96,
    "h": 96,
@@ -525,6 +599,7 @@
   },
   "notice_bits": {
    "file": "notice_bits.gif",
+   "name": "通知_提示 Bits",
    "ms": 1720,
    "w": 96,
    "h": 96,
@@ -532,6 +607,7 @@
   },
   "notice_heart": {
    "file": "notice_heart.gif",
+   "name": "通知_提示 爱心_喜欢",
    "ms": 1720,
    "w": 96,
    "h": 96,
@@ -539,6 +615,7 @@
   },
   "notice_like": {
    "file": "notice_like.gif",
+   "name": "通知_提示 点赞",
    "ms": 1720,
    "w": 96,
    "h": 96,
@@ -546,6 +623,7 @@
   },
   "notice_star": {
    "file": "notice_star.gif",
+   "name": "通知_提示 星星_收藏",
    "ms": 1720,
    "w": 96,
    "h": 96,
@@ -553,6 +631,7 @@
   },
   "notice_coin": {
    "file": "notice_coin.gif",
+   "name": "通知_提示 硬币",
    "ms": 1720,
    "w": 96,
    "h": 96,
@@ -560,6 +639,7 @@
   },
   "notice_whale": {
    "file": "notice_whale.gif",
+   "name": "通知_自定义",
    "ms": 1720,
    "w": 96,
    "h": 96,
@@ -567,6 +647,7 @@
   },
   "hit_coin": {
    "file": "hit_coin.gif",
+   "name": "被击中(硬币)",
    "ms": 800,
    "w": 96,
    "h": 96,
@@ -574,6 +655,7 @@
   },
   "eat_melon": {
    "file": "eat_melon.gif",
+   "name": "吃(西瓜)",
    "ms": 400,
    "w": 96,
    "h": 96,
@@ -581,6 +663,7 @@
   },
   "eat_popcorn": {
    "file": "eat_popcorn.gif",
+   "name": "吃(爆米花)",
    "ms": 1640,
    "w": 96,
    "h": 96,
@@ -588,6 +671,7 @@
   },
   "drink": {
    "file": "drink.gif",
+   "name": "喝(饮料杯)",
    "ms": 640,
    "w": 96,
    "h": 96,
@@ -595,6 +679,7 @@
   },
   "cake": {
    "file": "cake.gif",
+   "name": "蛋糕",
    "ms": 1520,
    "w": 96,
    "h": 96,
@@ -602,6 +687,7 @@
   },
   "hello1": {
    "file": "hello1.gif",
+   "name": "打招呼 1",
    "ms": 2320,
    "w": 96,
    "h": 96,
@@ -609,6 +695,7 @@
   },
   "hello2": {
    "file": "hello2.gif",
+   "name": "打招呼 2",
    "ms": 2000,
    "w": 96,
    "h": 96,
@@ -616,6 +703,7 @@
   },
   "arrive": {
    "file": "arrive.gif",
+   "name": "到达",
    "ms": 2080,
    "w": 96,
    "h": 96,
@@ -623,6 +711,7 @@
   },
   "bell": {
    "file": "bell.gif",
+   "name": "摇铃",
    "ms": 520,
    "w": 96,
    "h": 96,
@@ -630,6 +719,7 @@
   },
   "button": {
    "file": "button.gif",
+   "name": "按钮",
    "ms": 320,
    "w": 96,
    "h": 96,
@@ -637,6 +727,7 @@
   },
   "sing": {
    "file": "sing.gif",
+   "name": "唱歌",
    "ms": 1200,
    "w": 96,
    "h": 96,
@@ -644,6 +735,7 @@
   },
   "wink": {
    "file": "wink.gif",
+   "name": "眨眼",
    "ms": 1480,
    "w": 96,
    "h": 96,

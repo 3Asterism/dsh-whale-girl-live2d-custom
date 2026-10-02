@@ -1,6 +1,6 @@
 /** main.js —— 由 tools/split-front.mjs 从 pet.js 拆出；模块职责见 assets/app/README.md */
 
-import { bondAwayCheck, bondRefresh } from './behavior/bond.js'
+import { bondAwayCheck, bondRefresh, bondSticker } from './behavior/bond.js'
 import { connectSSE } from './behavior/events.js'
 import { wireFeed } from './behavior/feed.js'
 import { wireInteractions } from './behavior/gestures.js'
@@ -13,7 +13,7 @@ import { log } from './core/util.js'
 import { syncConds } from './director/conds.js'
 import { buildModel, loadRuntime } from './engine/runtime.js'
 import { buildUI } from './ui/build.js'
-import { loadStickers } from './ui/sticker.js'
+import { STK, loadStickers } from './ui/sticker.js'
 import { hudFetch } from './ui/hud.js'
 import { injectStyle } from './ui/styles.js'
 import './api/debug.js' // 副作用导入：加载后挂出 window.DSHPet
@@ -52,6 +52,7 @@ async function main() {
     wireTyping() // 输入框：打字时看着、清空 = 撤回
     wireSoul() // 记「页面上最近一次有人动」（发呆搭话用）
     wireFeed() // 拖文件喂她
+    STK.onShown = bondSticker // 她用出哪张图，就上报给图鉴（宿主校验、幂等）
     loadStickers() // 表情包清单（失败就静默：没有表情包她照样说话）
     connectSSE()
     startLoops()

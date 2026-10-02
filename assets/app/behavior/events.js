@@ -393,6 +393,8 @@ export function handleEvent(m) {
           line: failLine + '\n' + String(em).slice(0, 160),
           ms: 3200,
         })
+        if (shown && ladder === 'jail') bondMemory('jail', 3500) // 一起坐过牢
+        if (shown && ladder === 'fine') bondMemory('this-is-fine', 3500)
         // 错误详情让这条气泡超过了「短台词」的长度，所以图单独附着上去（播完 ≤4s 淡出）
         if (shown && !R.ui.bubble.stickerSrc) R.ui.bubble.sticker(sticker, {})
       } else {
