@@ -46,6 +46,7 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.gif': 'image/gif',
+  '.mp3': 'audio/mpeg',
   '.html': 'text/html; charset=utf-8',
   '.moc3': 'application/octet-stream',
 }
@@ -243,6 +244,12 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(rel).toLowerCase()
     if (rel.includes('..') || (ext !== '.gif' && ext !== '.json')) return send(res, 403, 'text/plain; charset=utf-8', 'forbidden')
     return serveFile(res, path.join(ASSETS, 'stickers', rel))
+  }
+  // 按压音效（小黄鸭 mp3），和真机宿主的 /dsh-pet/sound 路由一致：只放行 .mp3
+  if (url.startsWith('/dsh-pet/sound/')) {
+    const rel = decodeURIComponent(url.slice('/dsh-pet/sound/'.length).split('?')[0])
+    if (rel.includes('..') || path.extname(rel).toLowerCase() !== '.mp3') return send(res, 403, 'text/plain; charset=utf-8', 'forbidden')
+    return serveFile(res, path.join(ASSETS, 'sound', rel))
   }
   // 测试用：清掉「每天一次 / 永久一次」的领取记录（页面自己的定时器可能已经把名额领走了）
   if (url === '/__claims_reset') {

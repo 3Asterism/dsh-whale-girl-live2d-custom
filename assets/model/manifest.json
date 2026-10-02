@@ -4,6 +4,15 @@
   "displayName": "DS 鲸鱼娘",
   "url": "c_0120.model3.json",
   "source": "DS鲸鱼娘（B站@氵六青），VTube Studio 模型",
+  "press": {
+    "depth": 0.12,
+    "volume": 0.6,
+    "anchor": "content",
+    "pressOmega": 36,
+    "pressZeta": 0.95,
+    "releaseOmega": 22,
+    "releaseZeta": 0.3
+  },
   "motions": {
     "idle": {
       "group": "idle",

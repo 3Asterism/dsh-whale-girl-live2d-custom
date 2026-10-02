@@ -33,6 +33,24 @@ MIT license correctly).
   原图不随仓库分发 / 92 of the original 157 selected, cropped, downscaled to 96×96 at 25fps with a 63-colour palette;
   the originals are not redistributed. See `tools/build-stickers.py`.
 
+## 2.6 音效 / Sound effects
+
+- **范围 / Scope**：`assets/sound/**`（`duck-press.mp3`、`duck-release.mp3`，点击鲸鱼娘时的小黄鸭按下 / 松开音）
+- **来源 / Source**：取自 **dsh-whale-widget**（<https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget>）内置的
+  「小黄鸭」预设音效 `Ya1.mp3` / `Ya2.mp3`，**逐字节原样、未做任何修改**（仅改了文件名）
+  / The preset "rubber duck" sounds bundled with dsh-whale-widget, byte-for-byte unmodified (renamed only).
+- **性质 / Nature**：**开源素材，并非本项目或 dsh-whale-widget 作者的原创**（本项目维护者的说明）。
+  dsh-whale-widget 自己的 `PROVENANCE.md` 只把它们记为「内置音效」，没有给出原始出处和具体许可；
+  所以这里**不写具体许可名**，原始出处与许可待补
+  / Open-source material, not original to this project or to dsh-whale-widget (per this project's maintainer).
+  dsh-whale-widget's own `PROVENANCE.md` only lists them as bundled sounds without an upstream source or a named
+  license, so no specific license is claimed here; the original source and license are **to be confirmed**.
+- **许可 / License**：**不适用 MIT**；使用条款以原素材的开源许可为准，本项目仅**非商业**随包分发
+  / Not MIT; terms are those of the original open-source asset. Distributed here **non-commercially** only.
+- **代码 / Code**：机制（Web Audio 预解码、同步起播、点按时松开音排期到按压音结束前 40ms）参考了 dsh-whale-widget
+  （MIT），`assets/app/engine/squeak.js` 为重新实现 / The playback mechanism is modelled on dsh-whale-widget (MIT);
+  `assets/app/engine/squeak.js` is a fresh implementation.
+
 ## 3. 第三方运行时 / Third-party runtime
 
 | 组件 / Component | 许可 / License | 版权 / Copyright |

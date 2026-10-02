@@ -9,7 +9,8 @@
 config.js  core/        配置、共享状态 R、本地存储、小工具
 net/                    和宿主的 HTTP 往来（只管请求，不管演什么）
 persona/                「她是谁」：台词、表情映射、装饰动作表、礼物演出、羁绊故事（纯数据，几乎无逻辑）
-engine/                 Live2D 渲染与操控：rig（脸/道具三层仲裁）、动作、眨眼、视线、命中掩码、干活动画
+engine/                 Live2D 渲染与操控：rig（脸/道具三层仲裁）、动作、眨眼、视线、命中掩码、干活动画、
+                        press-spring（捏一下弹一下的弹簧物理，纯数学）、squeak（点她的小黄鸭音效）
 director/               编排：perform() 优先级仲裁、持续状态 conds、一轮收工 digest
 behavior/               各种「触发源 → 反应」：事件桥、手势、戳、待机、日常节律、羁绊演出、拖文件……
 ui/                     气泡、面板、菜单（ui/menu/**）、钱包 HUD、布局与样式
@@ -48,6 +49,8 @@ main.js                 启动顺序
 | 新增一段羁绊故事 | `persona/stories.js` |
 | 新增一条回忆 | 宿主 `lib/bond/memories.js` |
 | 调羁绊数值 | 只改宿主 `lib/bond/constants.js`，好感页自动跟着变 |
+| 调「捏一下、弹一下」的手感 / 换模型后重调 | 模型 `assets/model/manifest.json` 的 `press` 块（字段与缺省值见 `engine/press-spring.js` 的 `PRESS_DEFAULT`）；缩放原点默认自动取实体范围的底边中点。**不同模型不能直接套参数**，换模型先看效果再调；数值行为由 `node tools/test-press.mjs` 守住 |
+| 换按压音效 | 替换 `assets/sound/duck-press.mp3` / `duck-release.mp3`（署名同步改 `NOTICE.md` 2.6 节）；时序逻辑在 `engine/squeak.js` |
 
 ## 验证
 

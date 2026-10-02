@@ -1,5 +1,42 @@
 # 更新日志 / Changelog
 
+## 0.6.5 — 2026-10-02
+
+> **English summary**: pressing her now squishes and springs. **Click** = a squeak (a rubber-duck sound pair, press / release)
+> and one soft bounce; **hold** = she stays squished for as long as you hold; **let go** = she springs back with a few
+> decaying wobbles. The motion is a real damped spring (not a CSS bezier): press is fast and doesn't overshoot, release is
+> under-damped, it stays continuous if interrupted mid-bounce, and rapid pokes stack energy. Squash/stretch preserves volume
+> (squashed = wider, overshoot = taller + narrower) and scales around the bottom of her visible body (measured from the hit
+> mask), not the canvas edge. Tuning lives in each model's `manifest.json` → `press` block, because parameters can't be copied
+> between models. New "Press sound" toggle + volume in Settings.
+
+### 新：点她会「捏一下、弹一下」，还有小黄鸭音效
+
+- **单点**：按下「吱」一声、松开回一口气，身体软软弹一下。松开音在**音频线程上排期**到按下音结束前 40ms，无缝接上；
+- **按住**：一直缩着，按多久缩多久；**松手**：弹开，晃两三下才停；**拎起来拖动**：开始拖的那一刻就弹开。
+- 设置页新增「按压音效」开关和音量；关掉时完全静音，连 AudioContext 都不会创建。
+
+### 改：弹动换成真弹簧（不是 CSS 曲线）
+
+- 原来的「Q 弹」是 3 帧关键帧、每次都从原样硬起，和别的动画互相覆盖，所以看着僵。现在**所有弹跳共用一根弹簧**（`engine/press-spring.js`，纯数学）：
+  - **按下快、不冲；松开欠阻尼、会晃**（按下和松开不再是同一条曲线）；
+  - **接得上**：弹到一半又按下、又被戳，位移和速度连续，不跳帧；连戳的能量会叠加；
+  - **体积大致守恒**：压扁 → 变宽，过冲 → 变高变窄，X / Y 自然反相；
+  - **缩放原点 = 她实体范围的底边中点**（按命中掩码自动量），不是画布底边——这个模型画布下面有大片留白，原点放画布底边，缩的时候纸会离地飘；
+  - 系统开了「减少动态效果」时，松开不再晃。
+- **不同模型不能直接套参数**：幅度、体积守恒度、弹簧快慢都放进模型自己的 `manifest.json` 的 `press` 块（缺字段 / 写坏 / 越界都会兜住），换模型只调它。
+- `qBounce()`（庆祝、被连戳、干活时被戳……）改成给同一根弹簧一个冲量，调用方不用改。
+
+### 音效素材与署名
+
+- 小黄鸭按下 / 松开音取自 dsh-whale-widget 的内置音效，**逐字节原样**，署名与「原始出处、具体许可待补」写在 `NOTICE.md` 2.6 节与 `PROVENANCE.md`。代码是重新实现的（机制参考其 MIT 代码）。
+
+### 测试
+
+- 新增 `tools/test-press.mjs`（32 项：按下不冲、松开有回弹、打断连续、能量叠加、体积守恒、参数容错、极端参数稳定）和 `tools/test-squeak.mjs`（27 项：素材 / 署名、点按与按住的松开音时序、连点、加载失败、开关）。
+- 真实 Chrome 逐帧记录舞台形变验证：按下约 134ms 压到位不冲过头；松手冲到 scaleY 1.044 / scaleX 0.974（反相）、穿过原样 3 次、相邻帧变化 < 0.011；单点没有跳帧、没有残留 Web Animations；缩放原点落在实体底边中点；拖动一开始就弹开。
+- 宿主新增 `/dsh-pet/sound`（只放行 `.mp3`），`test-host` 同步更新路由清单。
+
 ## 0.6.4 — 2026-10-02
 
 > **English summary**: the toolbar now reliably auto-hides. Two paths used to keep it on screen forever: (1) opening a panel

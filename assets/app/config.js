@@ -13,6 +13,8 @@ export const CFG = Object.assign(
     sleepAfterMs: 180000,
     bubbleTtlMs: 0,
     maxWidthRatio: 0.5,
+    sound: true, // 点她 / 松开的小黄鸭按压音（宿主默认 true；这里兜底，预览页 / 老宿主没有这个键也行）
+    soundVol: 0.7, // 0–1
     stickers: true, // 表情包总开关（宿主默认 true；这里兜底，预览页 / 老宿主没有这个键也行）
     lowBalanceYuan: 5, // 余额低于多少元（仅 CNY）她「要米」；0 = 不要
     repeatChat: false, // 默认「安静模式」：气泡不显示对话原文（你问了什么/她回了什么），也不写过程流水账（工具路径、工具名、第 N 步、token 小结、分身提示）；她自己的台词、动作、表情、报错照常
@@ -26,6 +28,9 @@ export const BASE = '/dsh-pet'
 {
   const saved = readLayout()
   if (saved.repeatChat != null) CFG.repeatChat = !!saved.repeatChat
+  // 按压音效：开关与音量同理，是这台机器上这个人的偏好
+  if (saved.sound != null) CFG.sound = !!saved.sound
+  if (typeof saved.soundVol === 'number' && saved.soundVol >= 0 && saved.soundVol <= 1) CFG.soundVol = saved.soundVol
   // 话痨度（0 安静 / 1 普通 / 2 话痨）与「应景装扮」：同样是这台机器上这个人的偏好
   CFG.chatty = saved.chatty === 0 || saved.chatty === 1 || saved.chatty === 2 ? saved.chatty : 1
   CFG.flair = saved.flair == null ? true : !!saved.flair

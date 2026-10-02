@@ -167,7 +167,7 @@ check('注册了 control', exact.has('/dsh-pet/control'))
 check('注册了 state', exact.has('/dsh-pet/state'))
 check('注册了 diag', exact.has('/dsh-pet/diag'))
 check('注册了 standalone', exact.has('/dsh-pet/standalone'))
-check('注册了 model / vendor / app / stickers 前缀路由', prefixes.length === 4 && prefixes.some((p) => p.path === '/dsh-pet/stickers'), prefixes.map((p) => p.path).join(', '))
+check('注册了 model / vendor / app / stickers / sound 前缀路由', prefixes.length === 5 && prefixes.some((p) => p.path === '/dsh-pet/stickers') && prefixes.some((p) => p.path === '/dsh-pet/sound'), prefixes.map((p) => p.path).join(', '))
 check('挂了 index 注入', indexTaps.length === 1 || (listeners.get('webserver/index-inject') || []).length === 1)
 
 const get = async (p) => {

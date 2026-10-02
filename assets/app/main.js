@@ -7,11 +7,12 @@ import { wireInteractions } from './behavior/gestures.js'
 import { startLoops } from './behavior/idle.js'
 import { wirePageAwareness, wireTyping } from './behavior/page.js'
 import { wireSoul } from './behavior/soul.js'
-import { BASE } from './config.js'
+import { BASE, CFG } from './config.js'
 import { EXPR, R, droppedParams } from './core/state.js'
 import { log } from './core/util.js'
 import { syncConds } from './director/conds.js'
 import { buildModel, loadRuntime } from './engine/runtime.js'
+import { squeak } from './engine/squeak.js'
 import { buildUI } from './ui/build.js'
 import { STK, loadStickers } from './ui/sticker.js'
 import { hudFetch } from './ui/hud.js'
@@ -47,6 +48,8 @@ async function main() {
       log(`已忽略 ${droppedParams.size} 个模型里不存在的参数引用：`, Array.from(droppedParams).join('、'))
     }
     await buildModel()
+    squeak.setOn(CFG.sound) // 按压音效：开关 / 音量（本地偏好已在 config.js 里盖过宿主默认）
+    squeak.setVolume(CFG.soundVol)
     wireInteractions()
     wirePageAwareness() // DSH 界面本身的操作（新建会话 / 开设置 / 换主题…）
     wireTyping() // 输入框：打字时看着、清空 = 撤回

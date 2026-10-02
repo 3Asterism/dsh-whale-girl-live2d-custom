@@ -6,7 +6,8 @@ import { R, agent, bond } from '../core/state.js'
 import { readLayout } from '../core/storage.js'
 import { clamp } from '../core/util.js'
 import { PRI, chatLevel, noteUser, perform, performingNow, yieldTo } from '../director/perform.js'
-import { dragInertia } from '../engine/effects.js'
+import { dragInertia, pressIn, pressOut } from '../engine/effects.js'
+import { squeak } from '../engine/squeak.js'
 import { gaze, getStageRect, markStageRectDirty } from '../engine/gaze.js'
 import { hitTest } from '../engine/mask.js'
 import { IDLE_PROPS } from '../persona/items.js'
@@ -254,6 +255,7 @@ export function wireInteractions() {
           delete root.dataset.edge // 真的拖起来了才离开墙 / 角落，别再显示「贴着左边」
           delete root.dataset.corner // 工具条先挪回下面，吸没吸得上松手再说
           gestureLift() // 按住后动了 = 拎起来（同时终止「按住」）
+          pressOut() // 被拎起来就不再压着了：弹开，拖动时保持原样
         }
         if (dragMoved) {
           const nRect = root.getBoundingClientRect()
@@ -303,6 +305,8 @@ export function wireInteractions() {
       dragging = true
       dragMoved = false
       gestureArmHold() // 400ms 不动 = 按住（作者绑在左键按住上的「挤」）
+      squeak.down() // 小黄鸭按压音：按下挤一声（拖动 / 按住 / 戳都响，和 whale-widget 一样；音效开关关了就是空操作）
+      pressIn() // 身体往里缩；按住就一直缩着，松手 / 被拎起才弹开（见 effects.js）
       // ⚠️ 这里**不能**摘掉 data-edge / data-corner：按下去不一定是拖（也可能只是点一下 / 按住）。
       // 贴着角落时工具栏被摆在她侧边（CSS [data-corner]），因为角落里她下面已经没有空间了；
       // 以前一按下就摘掉，工具栏瞬间被挪回「下面」——正好画到屏幕外面去，而单纯点击不会触发松手后的重新吸附，
@@ -320,6 +324,8 @@ export function wireInteractions() {
     (e) => {
       if (!dragging) return
       dragging = false
+      squeak.up() // 松开回一口气：点按时无缝接在按下音后面，按住后松手立刻响
+      pressOut() // 弹开。放在 poke 之前：短按会登记「这一下已经弹过了」，poke 里的 qBounce(1) 才不会再叠第二下
       const wasHold = gestureEndHold()
       if (dragMoved) {
         // 松手：先看要不要贴边吸附，没吸附上再走自由惯性
@@ -338,6 +344,8 @@ export function wireInteractions() {
 
   document.addEventListener('pointercancel', () => {
     const wasDragging = dragging && dragMoved
+    if (dragging) squeak.up() // 被系统打断也要把这一轮收掉，不然「按着」的状态会一直挂着
+    pressOut() // 同理：别让她永远缩着
     dragging = false
     start = null
     gestureEndHold(true)

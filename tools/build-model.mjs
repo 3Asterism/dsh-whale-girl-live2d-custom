@@ -120,6 +120,9 @@ function build() {
     displayName: 'DS 鲸鱼娘',
     url: 'c_0120.model3.json',
     source: 'DS鲸鱼娘（B站@氵六青），VTube Studio 模型',
+    // 点按 / 按住「捏一下、弹一下」的手感，每个模型自己一份（不同模型不能直接套参数）。
+    // 字段含义与缺省值见 assets/app/engine/press-spring.js 的 PRESS_DEFAULT；anchor 'content' = 自动取实体范围底边中点。
+    press: { depth: 0.12, volume: 0.6, anchor: 'content', pressOmega: 36, pressZeta: 0.95, releaseOmega: 22, releaseZeta: 0.3 },
     motions: motionMeta,
     expressions,
   }

@@ -6,6 +6,7 @@ import { R } from '../../core/state.js'
 import { readLayout, saveLayout } from '../../core/storage.js'
 import { $, clamp } from '../../core/util.js'
 import { gazeCfg } from '../../engine/gaze.js'
+import { squeak } from '../../engine/squeak.js'
 import { applyPosition, clampPanels, fitModel } from '../layout.js'
 import { closePanels, setHidden } from '../panels.js'
 import { shell } from '../shell.js'
@@ -122,6 +123,43 @@ export function renderSettingsPane(panes, rerender) {
   })
   row1.append(eyeBtn, mouthBtn, chatBtn)
 
+  // 按压音效：点她「吱」一声、松开「呼」一声。开关和音量都是这台机器上这个人的偏好，存本地
+  const sndLabel = (on) => (on ? '按压音效：开' : '按压音效：关')
+  const sndBtn = $('button', 'dshp-btn', sndLabel(CFG.sound))
+  sndBtn.title = '点她（按下）挤一声，松开回一口气——小黄鸭那种。关掉就完全静音，连音频设备都不会去碰。'
+  sndBtn.addEventListener('click', () => {
+    CFG.sound = !CFG.sound
+    squeak.setOn(CFG.sound)
+    sndBtn.textContent = sndLabel(CFG.sound)
+    saveLayout({ sound: CFG.sound })
+  })
+  const sndRow = $('div', 'dshp-row')
+  sndRow.append(sndBtn)
+  const volLabel = $('label', 'dshp-label')
+  volLabel.append($('span', null, '音效音量'))
+  const vol = document.createElement('input')
+  vol.type = 'range'
+  vol.min = '0'
+  vol.max = '1'
+  vol.step = '0.05'
+  vol.value = String(CFG.soundVol)
+  const volOut = $('span', null, Math.round(CFG.soundVol * 100) + '%')
+  volOut.style.minWidth = '38px'
+  volOut.style.textAlign = 'right'
+  volOut.style.opacity = '.7'
+  vol.addEventListener('input', () => {
+    CFG.soundVol = Number(vol.value)
+    squeak.setVolume(CFG.soundVol)
+    volOut.textContent = Math.round(CFG.soundVol * 100) + '%'
+  })
+  vol.addEventListener('change', () => {
+    saveLayout({ soundVol: CFG.soundVol })
+    // 松手试响一声，调完马上知道多大声（音效关着就静音，down() 自己会挡掉）
+    squeak.down()
+    setTimeout(() => squeak.up(), 60)
+  })
+  volLabel.append(vol, volOut)
+
   const row0 = $('div', 'dshp-row')
   const resetAll = $('button', 'dshp-btn dshp-primary', '一键重置所有状态')
   resetAll.addEventListener('click', () => {
@@ -165,6 +203,8 @@ export function renderSettingsPane(panes, rerender) {
 
   box.append(
     row1,
+    sndRow,
+    volLabel,
     row2,
     $('div', 'dshp-hint', '拖动可以换位置；右键或 ⋯ 叫出菜单。\n表情平时由她自己挑——你在这里选只是 30 秒的临时心情，她遇到正事会自己换回来。\n\n话痨度、应景装扮、番茄钟、好感相关的一切开关，都在「好感」页。'),
   )

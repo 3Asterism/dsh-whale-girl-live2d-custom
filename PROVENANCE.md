@@ -15,6 +15,7 @@
 | `lib/`、`tools/`、`cordis.patch.yml`、`package.json`、文档 | **MIT**（Copyright © 2026 **Andersen216**） |
 | `assets/model/**`（moc3 / 贴图 / 表情 / 动作 / 物理 / cdi3） | **不适用 MIT**，**非商业**。CC BY-NC-SA 4.0（署名：上善无形 / ZipZipPipe / 氵六青）。由模型作者无偿分享，按其使用须知原样随本项目使用与分发 |
 | `assets/stickers/**`（表情包 GIF + manifest.json） | **不适用 MIT**，也**未套用 CC BY-NC-SA**。版权归 **赤风RED**（<https://space.bilibili.com/356746604>），「蓝色大肥鱼」系列；使用条款以原作者为准，本项目仅非商业随包分发。仓库里是压缩后的版本，原图不分发 |
+| `assets/sound/**`（小黄鸭按下 / 松开音 mp3） | **不适用 MIT**。**开源素材**（非本项目、也非 dsh-whale-widget 作者原创），取自 dsh-whale-widget 的内置音效；原始出处与具体许可待补，详见 [`NOTICE.md`](NOTICE.md) 2.6 节。仅非商业随包分发 |
 | `assets/vendor/live2dcubismcore.min.js` | **不适用 MIT**。Live2D Inc. 版权所有，按 Live2D Cubism SDK 的许可条款（Redistributable Code）使用 |
 | `assets/vendor/pixi.min.js` | **MIT**（PIXI.js v6.5.10） |
 | `assets/vendor/cubism4.min.js` | **MIT**（pixi-live2d-display v0.4.0） |
@@ -41,6 +42,7 @@
 | `assets/model/c_0120.moc3`、`c_0120.2048/texture_*.png`、`c_0120.physics3.json`、`c_0120.cdi3.json`、`motions/*.motion3.json`、`expressions/*.exp3.json` | 来自工作区 `DS鲸鱼娘/DS鼠控版.zip`（VTube Studio 模型包，原作者 B 站 **@氵六青**，UID 11272072） |
 | `assets/model/c_0120.model3.json`、`assets/model/manifest.json` | **本项目生成**（`tools/build-model.mjs`）。原包没有 `model3.json`（VTube Studio 直接按文件名加载动作），这里把 8 个动作注册成标准 motion group，并抽出一份表情参数清单 |
 | `assets/stickers/*.gif`、`assets/stickers/manifest.json` | 由 `tools/build-stickers.py` 从赤风RED的「蓝色大肥鱼」表情包（157 张，500×500）**挑选并压缩**生成：92 张，裁透明边、缩至 96×96、25fps、63 色；`manifest.json` 里的一圈时长在构建期测定。入选清单与每张图的梗见 `tools/stickers.curation.json` |
+| `assets/sound/duck-press.mp3`、`duck-release.mp3` | 取自 dsh-whale-widget（<https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget>）包内 `assets/Ya1.mp3`、`assets/Ya2.mp3`，字节原样（SHA-1 `3b96291d…` / `473a5312…`），仅改名。开源素材，原始出处待补 |
 | `assets/vendor/live2dcubismcore.min.js` | 取自 Live2D 官方 CDN `https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js` |
 | `assets/vendor/pixi.min.js` | npm `pixi.js@6.5.10` 的 `dist/browser/pixi.min.js` |
 | `assets/vendor/cubism4.min.js` | npm `pixi-live2d-display@0.4.0` 的 `dist/cubism4.min.js` |
