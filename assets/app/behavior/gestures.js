@@ -189,34 +189,35 @@ export function wireInteractions() {
   let dragging = false
   let dragMoved = false
   let start = null
-  let leaveTimer = null
-  let dockPinTimer = null
+  let dockTimer = null
   const pointer = { x: -1, y: -1 }
-  const pointerOnHer = () => hitTest(pointer.x, pointer.y) || overDock(pointer.x, pointer.y)
   /**
-   * 把四个按钮（说话 / 菜单 / 收起 / 打开 DSH）亮出来并停留 ms 毫秒。
-   * 主人反馈：「只有拖动才会显示，拖动不太符合人类的习惯，我希望鼠标点击也会显示」。
-   * 原来只认「鼠标在她身上移动」（悬停）——桌面壳点击穿透、触屏、鼠标一落下就没有 pointermove 的情况下
-   * 根本收不到悬停，只有按住拖动才会碰巧触发。现在**按下、点击、拖完**都会亮出来；
-   * 到点时鼠标还停在她身上 / 按钮上就继续留着，不会在你要点的时候缩回去。
+   * 工具栏（说话 / 菜单 / 收起 / 打开 DSH 四个按钮）：**只有点击她才出现**。
+   *   · 点她一下（没拖动、没按住）→ 出现，停 DOCK_MS；之后点别处 / 按 Esc / 开始拖她 / 超时 → 收起；
+   *     超时的时候鼠标还停在按钮上就继续留着，不会在你要点的时候缩回去；
+   *   · 拖动不出现、鼠标靠近 / 悬停也不出现（以前鼠标一靠近就冒出来，还会在不该出现的时候出现）。
+   * 没出现的时候它是 display:none，不占位、不接事件、桌面壳也不会把那一块当成「她的面板」。
    */
-  const pinDock = (ms) => {
-    root.classList.add('dshp-hover')
-    if (leaveTimer) {
-      clearTimeout(leaveTimer)
-      leaveTimer = null
-    }
-    clearTimeout(dockPinTimer)
+  const DOCK_MS = 8000
+  const dockOn = () => root.classList.contains('dshp-dock-on')
+  const hideDock = () => {
+    clearTimeout(dockTimer)
+    dockTimer = null
+    root.classList.remove('dshp-dock-on')
+  }
+  const showDock = () => {
+    root.classList.add('dshp-dock-on')
+    clearTimeout(dockTimer)
     const check = () => {
-      dockPinTimer = null
-      if (root.classList.contains('dshp-open')) return // 面板开着就一直留着，关面板时自然收
-      if (pointerOnHer()) {
-        dockPinTimer = setTimeout(check, 1200)
+      dockTimer = null
+      if (root.classList.contains('dshp-open')) return // 面板开着就留着，面板关了它也跟着没
+      if (overDock(pointer.x, pointer.y)) {
+        dockTimer = setTimeout(check, 1500) // 鼠标还在按钮上：再等等
         return
       }
-      root.classList.remove('dshp-hover')
+      root.classList.remove('dshp-dock-on')
     }
-    dockPinTimer = setTimeout(check, ms)
+    dockTimer = setTimeout(check, DOCK_MS)
   }
   const drag = { vx: 0, vy: 0 }
   /**
@@ -231,30 +232,17 @@ export function wireInteractions() {
     (e) => {
       if (!dragging) {
         strokeMove(e.clientX, e.clientY, e.buttons) // 悬停通道（没按键）：摸头
-        // 主人反馈：「我鼠标往下走要去点那三个键，一离开她身上它们就消失了，点不着」。
-        // 原因：原来只认 hitTest（她模型身上），而工具栏在她**下方**、不在模型掩码里。
-        // 现在把「鼠标在工具栏矩形内」也算作悬停，并且离开后多留 900ms。
         pointer.x = e.clientX
         pointer.y = e.clientY
-        const on = hitTest(e.clientX, e.clientY) || overDock(e.clientX, e.clientY)
-        if (on) {
-          root.classList.add('dshp-hover')
-          if (leaveTimer) {
-            clearTimeout(leaveTimer)
-            leaveTimer = null
-          }
-        } else if (!leaveTimer && !dockPinTimer && !root.classList.contains('dshp-open')) {
-          leaveTimer = setTimeout(() => {
-            leaveTimer = null
-            if (!root.classList.contains('dshp-open')) root.classList.remove('dshp-hover')
-          }, 900)
-        }
       } else if (start) {
         const dx = e.clientX - start.mx
         const dy = e.clientY - start.my
         // 点击容差 6px（以前 4px，手一抖就被判成拖动）：6px 以内算「还没动」
         if (!dragMoved && Math.abs(dx) + Math.abs(dy) > 6) {
           dragMoved = true
+          hideDock() // 拖动不出现工具栏；已经出现的也收起
+          delete root.dataset.edge // 真的拖起来了才离开墙 / 角落，别再显示「贴着左边」
+          delete root.dataset.corner // 工具条先挪回下面，吸没吸得上松手再说
           gestureLift() // 按住后动了 = 拎起来（同时终止「按住」）
         }
         if (dragMoved) {
@@ -301,13 +289,15 @@ export function wireInteractions() {
       noteUser()
       pointer.x = e.clientX
       pointer.y = e.clientY
-      pinDock(6000) // 一按下就亮出四个按钮，不用非得拖
       strokeReset()
       dragging = true
       dragMoved = false
       gestureArmHold() // 400ms 不动 = 按住（作者绑在左键按住上的「挤」）
-      delete root.dataset.edge // 一拖就离开墙，别再显示「贴着左边」
-      delete root.dataset.corner // 同上：一拖就离开角落，工具条先挪回下面，吸没吸得上松手再说
+      // ⚠️ 这里**不能**摘掉 data-edge / data-corner：按下去不一定是拖（也可能只是点一下 / 按住）。
+      // 贴着角落时工具栏被摆在她侧边（CSS [data-corner]），因为角落里她下面已经没有空间了；
+      // 以前一按下就摘掉，工具栏瞬间被挪回「下面」——正好画到屏幕外面去，而单纯点击不会触发松手后的重新吸附，
+      // 于是点几下之后按钮就一直在屏幕外（悬停、点击都叫不出来），只有拖一下、松手重新贴角才恢复。
+      // 现在只有真的开始拖了（见 pointermove 里 dragMoved）才摘。
       dragMargins = visualMargins()
       const r = root.getBoundingClientRect()
       start = { mx: e.clientX, my: e.clientY, left: r.left, top: r.top }
@@ -320,7 +310,6 @@ export function wireInteractions() {
     (e) => {
       if (!dragging) return
       dragging = false
-      pinDock(5000) // 点完 / 拖完都留几秒，够你去点按钮
       const wasHold = gestureEndHold()
       if (dragMoved) {
         // 松手：先看要不要贴边吸附，没吸附上再走自由惯性
@@ -330,6 +319,7 @@ export function wireInteractions() {
         gestureDrop()
       } else if (!wasHold) {
         poke(e.clientX, e.clientY) // 只有「没按住、没拖动」的快速点按才算戳
+        showDock() // ……也只有这种点击才亮出四个按钮
       }
       start = null
     },
@@ -337,9 +327,12 @@ export function wireInteractions() {
   )
 
   document.addEventListener('pointercancel', () => {
+    const wasDragging = dragging && dragMoved
     dragging = false
     start = null
     gestureEndHold(true)
+    // 拖到一半被系统打断：贴边 / 贴角状态已经摘掉了，按存档摆回去，工具栏才不会丢
+    if (wasDragging) applyPosition(readLayout())
   })
 
   document.addEventListener(
@@ -384,6 +377,7 @@ export function wireInteractions() {
 
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return
+    if (dockOn() && !hud.open && !R.ui.root.classList.contains('dshp-open')) hideDock()
     if (hud.open) {
       e.stopPropagation()
       closeHud()
@@ -393,6 +387,19 @@ export function wireInteractions() {
     e.stopPropagation()
     closePanels()
   })
+
+  // 点工具栏 / 她身上以外的任何地方：工具栏收起（点她身上算再点一下，由上面的 pointerup 续时间）
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (!dockOn()) return
+      const t = e.target
+      if (t && R.ui.dock && R.ui.dock.contains(t)) return
+      if (hitTest(e.clientX, e.clientY)) return
+      hideDock()
+    },
+    true,
+  )
 
   R.ui.tab.addEventListener('click', () => setHidden(false))
 

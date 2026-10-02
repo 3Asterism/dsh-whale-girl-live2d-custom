@@ -88,10 +88,12 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
    三个按钮被挤成 104px，文字折行后每个都变成又窄又高的方块。
    width:max-content 让它超出那半幅也能保持居中，按钮就恢复成正常的一行小按钮。 */
 .dshp-dock{position:absolute;left:50%;transform:translateX(-50%);
-  bottom:calc(-40px * var(--dshp-ds));display:flex;gap:calc(7px * var(--dshp-ds));
-  width:max-content;white-space:nowrap;
-  pointer-events:auto;opacity:0;transition:opacity .22s ease}
-.dshp-root.dshp-hover .dshp-dock,.dshp-root.dshp-open .dshp-dock{opacity:1}
+  bottom:calc(-40px * var(--dshp-ds));display:none;gap:calc(7px * var(--dshp-ds));
+  width:max-content;white-space:nowrap;pointer-events:auto}
+/* 只有「点她一下」（.dshp-dock-on，见 behavior/gestures.js）或面板开着时才出现；平时 display:none——
+   不占位、不接事件，桌面壳也不会把那一块当成她的面板（以前是 opacity:0 隐形地挂着，鼠标一靠近就冒出来）。 */
+.dshp-root.dshp-dock-on .dshp-dock,.dshp-root.dshp-open .dshp-dock{display:flex;animation:dshp-dock-in .18s ease}
+@keyframes dshp-dock-in{from{opacity:0}to{opacity:1}}
 /* 贴进真正的角落时，正下方没有余量留给工具条了（不然角落就白贴了），
    所以挪到侧边，竖排、贴着她身子。哪一侧空出来给按钮，看贴的是哪个角：
    贴左边的角（没有左边空间）就把按钮甩到右边，贴右边的角反过来。

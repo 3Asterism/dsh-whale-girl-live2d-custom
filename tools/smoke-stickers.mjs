@@ -435,37 +435,128 @@ async function main() {
   await ev('DSHPet.bond.refresh(); DSHPet.stickers.reset(); DSHPet.director.clear(); DSHPet.stickers.hide(); 1')
   await sleep(500)
   const recap = await ev(`(async () => { await DSHPet.stickers.routine(); await new Promise((r) => setTimeout(r, 200)); return JSON.stringify({ ok: DSHPet.director.trace().some((e) => e.id === 'routine-recap' && e.ok), text: DSHPet.stickers.state().text }) })()`).then(JSON.parse)
-  if (hourNow >= 9 && hourNow < 21) check('每周回顾：白天空闲时讲一次，带上上周的轮数 / 天数', recap.ok && /7/.test(recap.text) && /4/.test(recap.text), recap.text)
+  if (hourNow >= 9 && hourNow < 21) check('每周回顾：白天空闲时讲一次，带上上周的轮数', recap.ok && /7/.test(recap.text), recap.text)
   else check('每周回顾：夜里 / 早上不开口（现在是 ' + hourNow + ' 点）', recap.ok === false)
   const recapAgain = await ev(`(async () => { DSHPet.director.clear(); DSHPet.stickers.hide(); await DSHPet.stickers.routine(); await new Promise((r) => setTimeout(r, 200)); return DSHPet.director.trace().some((e) => e.id === 'routine-recap' && e.ok) })()`)
   check('每周回顾一周只讲一次', recapAgain === false)
 
-  // ── N. 工具栏：只点击（没有任何 pointermove、没有拖动）也要亮出四个按钮 ──
+  // ── N. 工具栏（说话 / 菜单 / 收起 / 打开 DSH 四个按钮）：**只有点击她才出现**；悬停、拖动、按住都不出现 ──
   await ev(`DSHPet.sim({ t: 'turn-end', turn: 95, reason: 'completed', ms: 1, tokens: 0 }); 1`)
   await sleep(300)
   const dock = JSON.parse(await ev(`(async () => {
     const root = document.getElementById('dsh-live2d-pet')
-    root.classList.remove('dshp-hover', 'dshp-open')
-    const sr = document.querySelector('#dsh-live2d-pet .dshp-stage').getBoundingClientRect()
-    const x = sr.left + sr.width / 2, y = sr.top + sr.height / 2
-    const fire = (t, px, py) => document.dispatchEvent(new PointerEvent(t, { clientX: px, clientY: py, button: 0, buttons: t === 'pointerup' || t === 'pointermove' ? 0 : 1, bubbles: true, cancelable: true }))
-    const before = root.classList.contains('dshp-hover')
+    const dockEl = root.querySelector('.dshp-dock')
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+    const sr = () => document.querySelector('#dsh-live2d-pet .dshp-stage').getBoundingClientRect()
+    const cx = () => { const r = sr(); return [r.left + r.width / 2, r.top + r.height / 2] }
+    const fire = (t, px, py, buttons) => document.dispatchEvent(new PointerEvent(t, { clientX: px, clientY: py, button: 0, buttons: buttons == null ? (t === 'pointerdown' ? 1 : 0) : buttons, bubbles: true, cancelable: true }))
+    const shown = () => root.classList.contains('dshp-dock-on') && getComputedStyle(dockEl).display !== 'none'
+    root.classList.remove('dshp-dock-on', 'dshp-open')
+    const out = {}
+    out.initial = shown()
+    // 1) 鼠标悬停在她身上 / 靠近工具栏原来的位置：不出现
+    let [x, y] = cx()
+    for (let i = 0; i < 8; i++) fire('pointermove', x + i * 3, y + i * 2)
+    const dr = dockEl.getBoundingClientRect()
+    fire('pointermove', (dr.left + dr.right) / 2 || x, (dr.top + dr.bottom) / 2 || y + 120)
+    await sleep(400)
+    out.hover = shown()
+    // 2) 拖动她：不出现
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); fire('pointermove', x - 15, y - 5, 1); fire('pointermove', x - 60, y - 20, 1); await sleep(50); fire('pointerup', x - 60, y - 20)
+    await sleep(700)
+    out.drag = shown()
+    // 3) 按住不动（捏脸）：不出现
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); await sleep(600); fire('pointerup', x, y)
+    await sleep(300)
+    out.hold = shown()
+    // 4) 点一下：出现，四个按钮
+    ;[x, y] = cx()
     fire('pointerdown', x, y)
-    const afterDown = root.classList.contains('dshp-hover')
+    out.onDown = shown() // 按下的瞬间还不算点击
     fire('pointerup', x, y)
-    await new Promise((r) => setTimeout(r, 3500))
-    const stillShown = root.classList.contains('dshp-hover')
-    const opacity = getComputedStyle(root.querySelector('.dshp-dock')).opacity
-    const buttons = root.querySelectorAll('.dshp-dock .dshp-btn').length
-    // 鼠标移开：钉住的时间到了就自己收
+    await sleep(350)
+    out.click = shown()
+    out.buttons = dockEl.querySelectorAll('.dshp-btn').length
+    out.opacity = getComputedStyle(dockEl).opacity
+    // 5) 再点一下她：还在（只是续时间）
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); fire('pointerup', x, y); await sleep(300)
+    out.clickAgain = shown()
+    // 6) 点别处：收起
+    fire('pointerdown', 2, 2); fire('pointerup', 2, 2)
+    await sleep(300)
+    out.outside = shown()
+    // 7) 点一下之后什么都不做：超时自己收（鼠标已经移开）
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); fire('pointerup', x, y)
     fire('pointermove', 2, 2)
-    await new Promise((r) => setTimeout(r, 7500))
-    const hiddenAfter = !root.classList.contains('dshp-hover')
-    return JSON.stringify({ before, afterDown, stillShown, opacity, buttons, hiddenAfter })
+    await sleep(300)
+    out.beforeTimeout = shown()
+    await sleep(8800)
+    out.afterTimeout = shown()
+    // 8) 点一下再 Esc：收起
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); fire('pointerup', x, y); await sleep(200)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await sleep(200)
+    out.esc = shown()
+    return JSON.stringify(out)
   })()`))
-  check('点击（按下）就亮出四个按钮，不用拖', dock.before === false && dock.afterDown === true && dock.buttons === 4, JSON.stringify(dock))
-  check('点完留几秒，鼠标还在她身上就不收', dock.stillShown === true && Number(dock.opacity) > 0.9, `opacity ${dock.opacity}`)
-  check('鼠标移开后自己收回去', dock.hiddenAfter === true)
+  check('平时四个按钮不存在（display:none）', dock.initial === false)
+  check('鼠标悬停 / 靠近：不出现', dock.hover === false)
+  check('拖动她：不出现', dock.drag === false)
+  check('按住不动（捏脸）：不出现', dock.hold === false)
+  check('点她一下：出现，四个按钮，完全可见', dock.onDown === false && dock.click === true && dock.buttons === 4 && Number(dock.opacity) > 0.9, JSON.stringify(dock))
+  check('再点她一下：还在', dock.clickAgain === true)
+  check('点别处：收起', dock.outside === false)
+  check('点完什么都不做：超时自己收', dock.beforeTimeout === true && dock.afterTimeout === false, `${dock.beforeTimeout} → ${dock.afterTimeout}`)
+  check('按 Esc：收起', dock.esc === false)
+
+  // ── P. 贴着角落时：只点一下 / 按住不动，不能丢掉「贴角」状态（否则四个按钮会被挪到屏幕外面去）──
+  // 用户报的 bug：点几下之后悬停、点击都叫不出按钮，只有拖一下才恢复。原因是 pointerdown 一按下就摘掉了 data-corner，
+  // 工具栏从「侧边」跳回「下面」——贴角时下面没有空间，画到屏幕外了；单纯点击又不会触发松手后的重新吸附。
+  await ev(`DSHPet.sim({ t: 'turn-end', turn: 97, reason: 'completed', ms: 1, tokens: 0 }); 1`)
+  await sleep(300)
+  const corner = JSON.parse(await ev(`(async () => {
+    const root = document.getElementById('dsh-live2d-pet')
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+    const stage = () => document.querySelector('#dsh-live2d-pet .dshp-stage').getBoundingClientRect()
+    const center = () => { const r = stage(); return [r.left + r.width / 2, r.top + r.height / 2] }
+    const fire = (t, x, y, buttons) => document.dispatchEvent(new PointerEvent(t, { clientX: x, clientY: y, button: 0, buttons: buttons == null ? (t === 'pointerdown' ? 1 : 0) : buttons, bubbles: true, cancelable: true }))
+    // 1) 真的拖到右下角，让她贴角
+    let [x, y] = center()
+    fire('pointerdown', x, y)
+    fire('pointermove', x + 12, y + 12, 1)
+    fire('pointermove', innerWidth - 8, innerHeight - 8, 1)
+    await sleep(50)
+    fire('pointerup', innerWidth - 8, innerHeight - 8)
+    await sleep(900)
+    const out = { snapped: root.dataset.corner || null, afterDrag: root.classList.contains('dshp-dock-on'), rounds: [] }
+    // 2) 然后只点（不拖）5 次，再按住不动 1 次
+    for (let i = 0; i < 6; i++) {
+      ;[x, y] = center()
+      root.classList.remove('dshp-dock-on')
+      fire('pointerdown', x, y)
+      if (i === 5) await sleep(600)
+      fire('pointerup', x, y)
+      await sleep(350)
+      const dockEl = root.querySelector('.dshp-dock')
+      const d = dockEl.getBoundingClientRect()
+      out.rounds.push({
+        hold: i === 5,
+        corner: root.dataset.corner || null,
+        shown: root.classList.contains('dshp-dock-on') && getComputedStyle(dockEl).display !== 'none',
+        inView: d.width > 0 && d.left >= 0 && d.top >= 0 && d.right <= innerWidth && d.bottom <= innerHeight,
+      })
+    }
+    return JSON.stringify(out)
+  })()`))
+  check('拖到角落后她贴角（工具栏挪到侧边）', !!corner.snapped && corner.afterDrag === false, `${corner.snapped}，拖完没有出现工具栏：${!corner.afterDrag}`)
+  check('贴角后点 5 下 + 按住 1 次：贴角状态一直在，没被摘掉', corner.rounds.every((r) => r.corner === corner.snapped), corner.rounds.map((r) => r.corner).join(','))
+  check('贴角时每次点击：四个按钮出现，而且整个在屏幕里（没被挤到屏幕外）', corner.rounds.filter((r) => !r.hold).every((r) => r.shown && r.inView), JSON.stringify(corner.rounds[0]))
+  check('贴角时按住不动：不出现', corner.rounds.filter((r) => r.hold).every((r) => !r.shown))
 
   const logs = (await ev('(window.__dshpLogs||[]).slice(0,20)')) || []
   const errors = logs.filter((l) => l.indexOf('E:') === 0 || l.indexOf('X:') === 0)

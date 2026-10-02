@@ -1,5 +1,29 @@
 # 更新日志 / Changelog
 
+## 0.6.3 — 2026-10-02
+
+> **English summary**: the four toolbar buttons (Talk / Menu / Collapse / Open DSH) now appear **only when you click her**
+> — not on drag, not on hover. Also fixed: pressing on her while docked in a corner stripped the corner state, which pushed
+> the toolbar off-screen; plain clicks never restored it, so after a few clicks the buttons could not be summoned at all
+> (only a drag would bring them back).
+
+### 改：四个按钮只在「点击」时出现
+
+- **点她一下**（没拖动、没按住）才出现；点别处、按 Esc、开始拖她、或 8 秒没用就收起；鼠标还停在按钮上就不收。
+- **悬停、鼠标靠近、拖动、按住都不出现**。以前它们隐形地挂在那儿（opacity 0），鼠标一靠近就冒出来；现在平时是 `display:none`——不占位、不接事件，
+  桌面壳也不会再把那块空地当成「她的面板」。
+
+### 修：贴着角落时点几下，按钮就再也叫不出来
+
+她贴在屏幕角落时，四个按钮被摆在她侧边（因为角落里她下面已经没有空间）。但 `pointerdown` 一按下（不管是点击还是拖动）就把「贴角」状态摘掉了，
+按钮瞬间被挪回「下面」——正好画到屏幕外面；单纯点击又不会触发松手后的重新吸附，所以点几下之后按钮一直在屏幕外，
+只有拖一下、松手重新贴角才恢复。现在只有**真的开始拖了**才摘贴角状态；拖到一半被系统打断也会按存档摆回去。
+
+### 测试
+
+`tools/smoke-stickers.mjs` 59 项：新增「悬停 / 拖动 / 按住都不出现、点击出现、点别处 / Esc / 超时收起」和「贴角后点 5 下 + 按住，按钮始终在屏幕里」
+（用修复前的代码跑过，确认会红）。
+
 ## 0.6.2 — 2026-10-02
 
 > **English summary**: bond system polish, informed by mature companion/collection games (Neko Atsume, Fire Emblem
@@ -8,7 +32,7 @@
 > recap, and stickers that unlock with bond level. The Bond tab was re-laid-out (relationship card → daily wish →
 > daily stuff → collections → settings). Also: clicking her now reveals the four toolbar buttons (it used to need a drag).
 
-### 改：点她一下就亮出四个按钮
+### 改：点她一下就亮出四个按钮（0.6.3 里改成了「只有点击才出现」，见上面 0.6.3）
 
 原来只有「鼠标在她身上移动」（悬停）才会亮出说话 / 菜单 / 收起 / 打开 DSH 四个按钮，桌面壳点击穿透、触屏这些收不到悬停的场景下只有按住拖动才会碰巧触发。
 现在**按下、点击、拖完**都会亮出来并停几秒；鼠标还在她身上 / 按钮上就继续留着，移开后自己收。
