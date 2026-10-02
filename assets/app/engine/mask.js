@@ -137,24 +137,3 @@ export function hitTest(clientX, clientY) {
   if (mx < 0 || my < 0 || mx >= mask.w || my >= mask.h) return false
   return mask.grid[my * mask.w + mx] === 1
 }
-
-/**
- * 鼠标是不是在「她下方那排按钮」上（含一点外扩的容错）。
- * 这三个键不在模型掩码里，只靠 hitTest 会让它们一出现就消失、根本点不着。
- */
-export function overDock(clientX, clientY) {
-  try {
-    if (!R.ui || !R.ui.dock) return false
-    const r = R.ui.dock.getBoundingClientRect()
-    if (!r.width || !r.height) return false
-    const pad = 12
-    return (
-      clientX >= r.left - pad &&
-      clientX <= r.right + pad &&
-      clientY >= r.top - pad &&
-      clientY <= r.bottom + pad
-    )
-  } catch (err) {
-    return false
-  }
-}

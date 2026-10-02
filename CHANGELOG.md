@@ -1,5 +1,21 @@
 # 更新日志 / Changelog
 
+## 0.6.4 — 2026-10-02
+
+> **English summary**: the toolbar now reliably auto-hides. Two paths used to keep it on screen forever: (1) opening a panel
+> (Talk / Menu) before the idle timer fired killed the timer, so after the panel closed nothing ever hid the buttons;
+> (2) a pointer resting near the buttons re-armed the timer endlessly. Now it hides 4 s after you last *used* it
+> (clicking her, or moving / pressing on the buttons — a resting pointer doesn't count) and immediately after a panel closes.
+
+### 修：四个按钮「一直挂着」不消失
+
+- **原因一**：点她后在超时前点了「说话 / 菜单」，定时器到点发现面板开着就直接放弃；面板关了之后再没有任何东西会收按钮。
+- **原因二**：鼠标停在按钮附近时，每 1.5 秒无限续期；点完按钮鼠标一放，按钮就永远不走。
+- **现在**：距离上一次「用它」满 **4 秒**（原 8 秒）就收；点她、在按钮上移动 / 按下才算用，鼠标停着不动不算；
+  面板（说话 / 菜单）一关按钮立刻跟着收。仍然只有点击她才会出现。
+- 回归测试 `smoke-stickers.mjs` 新增：开面板再关、鼠标停在按钮上不动，两种情形下按钮都必须收起（旧代码两条都失败）。
+- 清理：删除不再使用的 `overDock()`。
+
 ## 0.6.3 — 2026-10-02
 
 > **English summary**: the four toolbar buttons (Talk / Menu / Collapse / Open DSH) now appear **only when you click her**

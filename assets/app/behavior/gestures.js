@@ -8,7 +8,7 @@ import { clamp } from '../core/util.js'
 import { PRI, chatLevel, noteUser, perform, performingNow, yieldTo } from '../director/perform.js'
 import { dragInertia } from '../engine/effects.js'
 import { gaze, getStageRect, markStageRectDirty } from '../engine/gaze.js'
-import { hitTest, overDock } from '../engine/mask.js'
+import { hitTest } from '../engine/mask.js'
 import { IDLE_PROPS } from '../persona/items.js'
 import { closeHud, hud, openHud } from '../ui/hud.js'
 import { applyPosition, clampPanels, fitModel, snapOnRelease, visualMargins } from '../ui/layout.js'
@@ -190,34 +190,44 @@ export function wireInteractions() {
   let dragMoved = false
   let start = null
   let dockTimer = null
+  let dockUntil = 0
+  let dockSawPanel = false
   const pointer = { x: -1, y: -1 }
   /**
-   * 工具栏（说话 / 菜单 / 收起 / 打开 DSH 四个按钮）：**只有点击她才出现**。
-   *   · 点她一下（没拖动、没按住）→ 出现，停 DOCK_MS；之后点别处 / 按 Esc / 开始拖她 / 超时 → 收起；
-   *     超时的时候鼠标还停在按钮上就继续留着，不会在你要点的时候缩回去；
-   *   · 拖动不出现、鼠标靠近 / 悬停也不出现（以前鼠标一靠近就冒出来，还会在不该出现的时候出现）。
+   * 工具栏（说话 / 菜单 / 收起 / 打开 DSH 四个按钮）：**只有点击她才出现**，一阵子不用就自己收。
+   *   · 点她一下（没拖动、没按住）→ 出现；之后点别处 / 按 Esc / 开始拖她 / 闲置超时 → 收起；
+   *   · 「闲置」= 距离上一次「用它」满 DOCK_MS：点她、在按钮上移动 / 按下才算用，鼠标停着不动不算
+   *     （以前「鼠标还停在按钮附近就一直续」且没有上限，点完按钮鼠标一放，它就永远不走了）；
+   *   · 面板（说话 / 菜单）开着时按钮本来就跟着面板；面板一关，按钮立刻跟着收（以前定时器到点时面板开着就直接放弃，
+   *     面板关了之后再没有任何东西会收它，于是一直挂在那里）；
+   *   · 拖动不出现、鼠标靠近 / 悬停也不出现。
    * 没出现的时候它是 display:none，不占位、不接事件、桌面壳也不会把那一块当成「她的面板」。
    */
-  const DOCK_MS = 8000
+  const DOCK_MS = 4000
   const dockOn = () => root.classList.contains('dshp-dock-on')
+  const panelOpen = () => root.classList.contains('dshp-open')
   const hideDock = () => {
     clearTimeout(dockTimer)
     dockTimer = null
     root.classList.remove('dshp-dock-on')
   }
+  const touchDock = () => {
+    dockUntil = Date.now() + DOCK_MS
+  }
+  // 按钮可见期间每 0.5 秒看一眼（只在可见时跑，成本可以忽略）：面板关了 / 闲置满了就收
+  const tickDock = () => {
+    dockTimer = null
+    if (!dockOn()) return
+    if (panelOpen()) dockSawPanel = true
+    else if (dockSawPanel || Date.now() >= dockUntil) return hideDock()
+    dockTimer = setTimeout(tickDock, 500)
+  }
   const showDock = () => {
     root.classList.add('dshp-dock-on')
+    dockSawPanel = panelOpen()
+    touchDock()
     clearTimeout(dockTimer)
-    const check = () => {
-      dockTimer = null
-      if (root.classList.contains('dshp-open')) return // 面板开着就留着，面板关了它也跟着没
-      if (overDock(pointer.x, pointer.y)) {
-        dockTimer = setTimeout(check, 1500) // 鼠标还在按钮上：再等等
-        return
-      }
-      root.classList.remove('dshp-dock-on')
-    }
-    dockTimer = setTimeout(check, DOCK_MS)
+    dockTimer = setTimeout(tickDock, 500)
   }
   const drag = { vx: 0, vy: 0 }
   /**
@@ -407,6 +417,7 @@ export function wireInteractions() {
   for (const el of [R.ui.composer.el, R.ui.menu.el, R.ui.hud.el, R.ui.dock]) {
     el.addEventListener('pointerdown', (e) => e.stopPropagation())
   }
+  for (const ev of ['pointermove', 'pointerdown']) R.ui.dock.addEventListener(ev, touchDock, { passive: true })
 
   // 鼠标停在 HUD 上时不要自动收（主人在看）
   R.ui.hud.el.addEventListener('pointerenter', () => {

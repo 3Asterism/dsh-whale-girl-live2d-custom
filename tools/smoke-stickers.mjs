@@ -494,7 +494,7 @@ async function main() {
     fire('pointermove', 2, 2)
     await sleep(300)
     out.beforeTimeout = shown()
-    await sleep(8800)
+    await sleep(4800)
     out.afterTimeout = shown()
     // 8) 点一下再 Esc：收起
     ;[x, y] = cx()
@@ -502,6 +502,26 @@ async function main() {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     await sleep(200)
     out.esc = shown()
+    // 9) 点一下 → 点「说话」开面板 → 面板里关掉（Esc 之外的路径：直接 closePanels）：按钮跟着面板一起没，不会留下
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); fire('pointerup', x, y); await sleep(250)
+    dockEl.querySelector('.dshp-btn').click() // 第一个按钮 = 说话
+    await sleep(700) // 面板开着（超过一个检查周期）
+    out.panelOpen = root.classList.contains('dshp-open')
+    out.dockWithPanel = getComputedStyle(dockEl).display !== 'none'
+    DSHPet.closePanels ? DSHPet.closePanels() : root.classList.remove('dshp-open')
+    await sleep(900)
+    out.afterPanel = shown()
+    // 10) 点一下 → 鼠标挪到按钮上然后停着不动：不能一直续，闲置满了照样收
+    ;[x, y] = cx()
+    fire('pointerdown', x, y); fire('pointerup', x, y); await sleep(250)
+    const d2 = dockEl.getBoundingClientRect()
+    const bx = (d2.left + d2.right) / 2, by = (d2.top + d2.bottom) / 2
+    fire('pointermove', bx, by)
+    await sleep(500)
+    out.restOn = shown()
+    await sleep(4800)
+    out.restAfter = shown()
     return JSON.stringify(out)
   })()`))
   check('平时四个按钮不存在（display:none）', dock.initial === false)
@@ -513,6 +533,8 @@ async function main() {
   check('点别处：收起', dock.outside === false)
   check('点完什么都不做：超时自己收', dock.beforeTimeout === true && dock.afterTimeout === false, `${dock.beforeTimeout} → ${dock.afterTimeout}`)
   check('按 Esc：收起', dock.esc === false)
+  check('点「说话」开面板再关掉：按钮跟着收，不会留着', dock.panelOpen === true && dock.dockWithPanel === true && dock.afterPanel === false, JSON.stringify(dock))
+  check('鼠标停在按钮上不动：闲置满了照样收', dock.restOn === true && dock.restAfter === false, `${dock.restOn} → ${dock.restAfter}`)
 
   // ── P. 贴着角落时：只点一下 / 按住不动，不能丢掉「贴角」状态（否则四个按钮会被挪到屏幕外面去）──
   // 用户报的 bug：点几下之后悬停、点击都叫不出按钮，只有拖一下才恢复。原因是 pointerdown 一按下就摘掉了 data-corner，
