@@ -89,6 +89,22 @@ export function getStageRect() {
   return stageRect
 }
 
+/**
+ * 主人正在打字的输入框的矩形，缓存 300ms。
+ * 打字时 gazeTick 每 40ms 都要它：直接 getBoundingClientRect() 会在 DSH 刚改完 DOM（每敲一个键，输入框可能就在长高）
+ * 之后立刻强制同步重排——DSH 的聊天页 DOM 一大，这就是每秒 25 次的额外重排，打字会发涩。
+ * 输入框的位置在 300ms 里几乎不会动，视线也不需要更准。
+ */
+let typingRect = null
+
+function typingRectOf(el, now) {
+  if (!typingRect || typingRect.el !== el || now - typingRect.at > 300) {
+    const r = el.getBoundingClientRect()
+    typingRect = { el, at: now, left: r.left, top: r.top, width: r.width, height: r.height }
+  }
+  return typingRect
+}
+
 export function gazeTick() {
   if (!R.model || !R.ui) return
   const now = performance.now()
@@ -107,7 +123,7 @@ export function gazeTick() {
   let forced = false
   const typingEl = detached ? null : typingTarget()
   if (typingEl) {
-    const tr = typingEl.getBoundingClientRect()
+    const tr = typingRectOf(typingEl, now)
     px = tr.left + Math.min(tr.width, 360) * 0.5
     py = tr.top + Math.min(tr.height, 80) * 0.5
     forced = true

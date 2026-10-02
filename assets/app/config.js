@@ -31,6 +31,10 @@ export const BASE = '/dsh-pet'
   // 按压音效：开关与音量同理，是这台机器上这个人的偏好
   if (saved.sound != null) CFG.sound = !!saved.sound
   if (typeof saved.soundVol === 'number' && saved.soundVol >= 0 && saved.soundVol <= 1) CFG.soundVol = saved.soundVol
+  // 省电模式（低性能档）：设置页里的开关，也是这台机器上这个人的偏好（桌面壳启动后会按它自己菜单里的状态再设一次）
+  CFG.lowPower = saved.lowPower === true
+  // 待机降帧：她静止 4 秒后自动降到 15 帧，一有动静立刻回满帧。默认开，设置页里能关
+  CFG.idleThrottle = saved.idleThrottle !== false
   // 话痨度（0 安静 / 1 普通 / 2 话痨）与「应景装扮」：同样是这台机器上这个人的偏好
   CFG.chatty = saved.chatty === 0 || saved.chatty === 1 || saved.chatty === 2 ? saved.chatty : 1
   CFG.flair = saved.flair == null ? true : !!saved.flair

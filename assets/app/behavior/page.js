@@ -36,12 +36,20 @@ const MODEL_SEARCH = 'input[placeholder*="搜索模型"],input[placeholder*="ear
 function modelPickLabel(target) {
   if (!target || !target.closest) return null
   if (target.closest('input,textarea')) return null
-  let p = target
+  // 这个处理器挂在整个 DSH 页面的**每一次点击**上（捕获阶段，早于 DSH 自己的处理）。
+  // 以前是从点中的元素往上走 12 层，每一层都 querySelector 一遍（越往上扫的子树越大，最顶上几层是整页 DOM）：
+  // 没有弹层的时候（绝大多数点击）白扫 12 遍。现在整页只扫一遍找「搜索模型」输入框，找不到就直接返回；
+  // 找到了再从输入框往上，看哪一层把点中的元素也包住——还是「最近的、同时包住输入框和点击目标的祖先」。
+  const inputs = document.querySelectorAll(MODEL_SEARCH)
+  if (!inputs.length) return null
   let popup = null
-  for (let i = 0; i < 12 && p; i++, p = p.parentElement) {
-    if (p.querySelector && p.querySelector(MODEL_SEARCH)) {
-      popup = p
-      break
+  outer: for (const input of inputs) {
+    let p = input
+    for (let i = 0; i < 12 && p; i++, p = p.parentElement) {
+      if (p.contains(target)) {
+        popup = p
+        break outer
+      }
     }
   }
   if (!popup) return null

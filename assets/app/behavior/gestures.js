@@ -235,8 +235,10 @@ export function wireInteractions() {
    * 拖动这一路上用的留白缓存：按下的时候现测一次就够了（拖动中她的轮廓不会变），
    * 没必要跟 visualMargins() 一样每次都强制重测——那是给松手那一刻的精确判断用的，
    * 真拖起来（pointermove 高频触发）每帧都测一次画布就太贵了。
+   * 而且连「按下的时候」都不测：单击不需要它，等确认是拖动（位移 > 6px）那一刻再量一次。
    */
-  let dragMargins = { left: 0, right: 0, top: 0, bottom: 0 }
+  const ZERO_MARGINS = { left: 0, right: 0, top: 0, bottom: 0 }
+  let dragMargins = ZERO_MARGINS
 
   document.addEventListener(
     'pointermove',
@@ -254,13 +256,17 @@ export function wireInteractions() {
           hideDock() // 拖动不出现工具栏；已经出现的也收起
           delete root.dataset.edge // 真的拖起来了才离开墙 / 角落，别再显示「贴着左边」
           delete root.dataset.corner // 工具条先挪回下面，吸没吸得上松手再说
+          // 留白在「真的拖起来」这一刻才量（一次）：以前每次按下都量，而按下绝大多数是单击——
+          // 量一次要把 WebGL 画布读回 CPU（GPU 同步等待），白白卡在最需要立刻响应的按下那一帧上。
+          dragMargins = visualMargins()
           gestureLift() // 按住后动了 = 拎起来（同时终止「按住」）
           pressOut() // 被拎起来就不再压着了：弹开，拖动时保持原样
         }
         if (dragMoved) {
-          const nRect = root.getBoundingClientRect()
-          const nh = nRect.height
-          const nw = nRect.width
+          // 尺寸用按下时量好的：拖动中她的框不会变；每个 pointermove 都读 getBoundingClientRect
+          // 会紧跟在上一次写 left/top 之后强制同步重排。
+          const nh = start.h
+          const nw = start.w
           // 原来是写死的 -40/-60 容差——现在贴角落要求看得见的边能拖到真正
           // 贴墙，写死的小容差不够用（透明留白一大，包围盒还没到边就被卡住了，
           // 松手时永远进不了 SNAP_DIST）。改成按这次抓起来时量到的留白放宽：
@@ -286,6 +292,7 @@ export function wireInteractions() {
       gaze.pointer.x = e.clientX
       gaze.pointer.y = e.clientY
       gaze.pointer.seen = true
+      gaze.pointer.at = performance.now() // 待机降帧靠它判断「有人在动鼠标」（见 engine/runtime.js）
     },
     { passive: true },
   )
@@ -293,6 +300,7 @@ export function wireInteractions() {
   document.addEventListener(
     'pointerdown',
     (e) => {
+      gaze.pointer.at = performance.now() // 触屏没有前置的 pointermove：按下本身也算「有动静」，立刻回满帧
       if (e.button !== 0) return
       if (!hitTest(e.clientX, e.clientY)) return
       // 点在鲸鱼娘身上：吃掉这次点击，别让下面的 DSH 界面也响应
@@ -312,9 +320,9 @@ export function wireInteractions() {
       // 以前一按下就摘掉，工具栏瞬间被挪回「下面」——正好画到屏幕外面去，而单纯点击不会触发松手后的重新吸附，
       // 于是点几下之后按钮就一直在屏幕外（悬停、点击都叫不出来），只有拖一下、松手重新贴角才恢复。
       // 现在只有真的开始拖了（见 pointermove 里 dragMoved）才摘。
-      dragMargins = visualMargins()
+      dragMargins = ZERO_MARGINS // 真拖起来时才量（见 pointermove）
       const r = root.getBoundingClientRect()
-      start = { mx: e.clientX, my: e.clientY, left: r.left, top: r.top }
+      start = { mx: e.clientX, my: e.clientY, left: r.left, top: r.top, w: r.width, h: r.height }
     },
     true,
   )
@@ -378,7 +386,11 @@ export function wireInteractions() {
     true,
   )
 
-  window.addEventListener('resize', () => {
+  // 拖窗口边缘缩放时 resize 事件一帧可以来好几次，而每一次都要：重设 WebGL 画布尺寸（重新分配缓冲）、
+  // 读两次 localStorage（JSON.parse）、贴边时还要把画布读回 CPU 重量留白。合并成「每帧最多一次」。
+  let resizeRaf = 0
+  const onResize = () => {
+    resizeRaf = 0
     fitModel()
     const layout = readLayout()
     // 贴着角落 / 贴着左右墙的：重新贴住原来那个位置（角落两个方向都重新锁一遍，
@@ -391,6 +403,9 @@ export function wireInteractions() {
     }
     markStageRectDirty() // 视口本身变了，缓存的矩形肯定不准了——兜底再标一次
     clampPanels()
+  }
+  window.addEventListener('resize', () => {
+    if (!resizeRaf) resizeRaf = requestAnimationFrame(onResize)
   })
 
   window.addEventListener('keydown', (e) => {

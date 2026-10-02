@@ -1,5 +1,72 @@
 # 更新日志 / Changelog
 
+## 0.6.6 — 2026-10-02
+
+> **English summary**: a full performance review. Measured first, so some suspects were cleared (per-frame JS is ~4µs; not worth
+> touching). Real findings: (1) the "busy" dot's continuous `infinite` animation made the compositor produce ~100 frames/s
+> instead of ~29 for the whole time an agent works — now stepped (~22); (2) `backdrop-filter` on ≥95%-opaque bubble/panel/HUD
+> removed (invisible, but re-blurred whenever anything behind repaints); (3) low-power mode now actually has styles and a
+> Settings toggle (it was reachable only from the desktop shell menu and `dshp-lowpower` had no CSS); (4) static assets had
+> `no-cache` but no ETag, so every page load re-sent ~5.3MB — now 304s (~38KB); (5) SSE text/reasoning deltas are coalesced
+> (~10 frames/s instead of one per token); (6) bond/stats reads no longer write the stats file every time; (7) a click on her
+> no longer reads the WebGL canvas back on pointer-down; (8) smaller fixes (resize storms, typing-rect layout reads, page-wide
+> click handler, hidden-pet ticker, leaked sampling canvases); (9) idle auto-throttle: after 4s of stillness she drops to
+> 15fps and snaps back to 30 on any activity (pure-idle GPU −49%, renderer −35%); the stage `drop-shadow` filter is replaced
+> by a pre-baked static shadow canvas (no measurable difference under software rendering — kept for principle); (10) the
+> stats file is now written atomically (tmp + rename) and the baseline balance is reused when fetched ≤5s ago.
+
+### 改：最大的一项——「在忙」的小圆点
+
+- 忙碌气泡（agent 干活期间一直挂着）里的脉冲点是连续缓动的 `infinite` 动画，会让合成器**每个 vsync 都出一帧**：
+  实测纯待机每秒 **29** 个合成帧（= 画布 30fps），挂上它涨到 **100**（3.4 倍）。改成阶梯缓动 `steps(4)`，合成帧 **~22**，看着还是在呼吸。
+  （度量的是合成帧数而不是 CPU%——软件渲染下 CPU% 噪声太大；帧数与硬件无关、很稳。`steps` 档数不是越多越好：5 档起又开始涨，8 档约 40。）
+- 受控对照（无头 Chrome 软件渲染，窗口 560×900，状态钉成「干活中」，每个变体全新 Chrome × 3 轮，误差 < 2%）：干活时空闲的 GPU 进程占用 **旧样式 1007% → 新样式 250%（−75%）→ 省电模式 130%**；纯待机无气泡的基线是 220%。绝对值被软件渲染放大，真机 GPU 会小得多，**看比例**：干活时的额外开销几乎全被去掉了。
+- 气泡 / 面板 / HUD 去掉 `backdrop-filter`：底色本来就是 95~96% 不透明，毛玻璃看不出来，却要在背后任何东西重绘时（agent 干活时 DSH 页面一直在刷）重新模糊。
+
+### 改：阴影预烘 + 待机自动降帧
+
+- **阴影不再是每帧重跑的滤镜**：以前是 `.dshp-stage{filter:drop-shadow(0 10px 20px)}`，画布每帧更新（30fps），这个模糊就每帧对整个舞台重跑一遍。现在把她的轮廓（采样掩码时已经有的 alpha）画成一张黑色小画布（`.dshp-shadow`），放在 WebGL 画布后面，模糊 / 下移 / 透明度用 CSS 加在这张**内容不变**的画布上——合成器缓存结果，每帧零成本。只在掩码重建时重画；跟着舞台一起被弹簧压扁 / 弹开；低性能档直接藏掉。和旧阴影并排截图对比过，视觉很接近（阴影略有差别，已调到肉眼对得上）。**诚实说明**：在无头 Chrome 软件渲染的受控对照里，这一项**没有量出可见差别**（纯待机 GPU 221% vs 220%，干活 249% vs 248%）——软件渲染下旧滤镜的成本没被体现出来，真机 GPU 上有没有收益我无法证明；它的价值是原理上不再每帧重跑模糊，以及低性能档能整个藏掉。DOM 里它排在 WebGL 画布后面，`querySelector('canvas')`（桌面壳就这么取）取到的还是 WebGL 那张。
+- **待机自动降帧**：她静止（agent 空闲、没有互动级表演 / 动作 / 说话、鼠标和打字都停了 3 秒以上）满 **4 秒**就从 30 帧降到 **15 帧**，**任何动静下一个 tick 就回 30 帧**（鼠标一动、触屏按下、事件一来、戳她……）。待机大脑每几秒演一段的「待机级」表演（换表情 / 碎碎念）**不算动静**——它们占了一半以上的时间，算的话永远降不下来。agent 干活时不降。设置页新增「待机降帧」开关（默认开）。受控对照（软件渲染，每组 3 次，误差 < 1%）：**纯待机 GPU 进程 221% → 114%（−49%），渲染进程 8.5% → 5.5%（−35%）**。
+
+### 改：统计文件原子写 / 余额少拉一次
+
+- **统计文件原子写**（`lib/stats/store.js`）：以前 `writeFileSync` 是先截断再写，写到一半进程被杀 / 断电就是半截 JSON，`read()` 解析失败会当成「今天刚认识」——陪伴天数、累计 token、羁绊等级全部归零。现在先写同目录 `.tmp` 再 `rename`（同卷上是原子的）；Windows 上被杀软 / 索引器占着文件导致 rename 失败时退回直接写，不比以前更差。
+- **起点余额复用刚拉过的结果**：一轮结束刚强制拉过一次，紧接着下一轮开始又强制拉一次当「起点余额」，两次之间往往只隔几秒、余额没变，白打一次 DeepSeek。现在 `turn/start` 的那次允许复用 ≤5 秒前**成功**的结果；结算那次仍然强制拉最新的，失败的结果不复用，超过 5 秒照常重查（旧缓存的坑不会回来）。
+
+### 新：省电模式真的能用了
+
+- **设置页新增「省电模式」开关**，会记住、重启后接着开。以前低性能档只有桌面壳的菜单能开，网页端根本没有入口。
+- **`.dshp-lowpower` 以前没有任何样式认它**（类名早就挂在 body 上了）：开了低性能也照样跑着舞台阴影和忙碌点动画。现在低性能档会去掉它们（连同 20 帧、1 倍分辨率、不自言自语）。
+- 低性能档下不再预取 11MB 的表情包（注释一直这么写，代码没判）。
+
+### 改：宿主
+
+- **静态资源带校验器**（ETag + Last-Modified）：以前 vendor / 模型 / 前端模块写了 `no-cache` / `no-store` 却没有任何校验器，浏览器想校验也没法校验——**每次刷新页面把 pixi / cubism / 贴图 / 75 个前端模块（约 5.3MB）原样重传、重新编译**。现在 `no-cache` + ETag：每次仍会问一声（改了文件刷新就生效，热读取语义不变），没变就 304（实测传输 5318KB → 38KB，89 / 92 个请求 304）。表情包 GIF 一天新鲜期过后也是 304，不再整张重下。
+- **逐字流合并**（`lib/events/coalesce.js`）：深度思考动辄上万个增量，以前每个都是单独一帧 SSE + 前端一次 `JSON.parse`；现在每 ~100ms 一帧、**首字立刻发**、文字和顺序一字不差、别的事件前先 flush 保证顺序（1000 个增量 → 11 帧）。没有客户端时不攒；某个客户端积压超过 1MB（标签页被冻结）时只对它丢逐字流，不让宿主内存一直涨。`tool-draft`（前端没有任何地方消费它）同一工具一秒最多报一次。
+- **读不再写盘**：羁绊的 `snapshot()` / `brief()`（每次开 HUD、每轮结束、每 10 分钟都会调）以前每次都同步 `writeFileSync`（实测约 0.55ms 一次，杀软扫描时更久），卡在 DSH 宿主的事件循环上。现在内容没变就不写。
+- 文件流改用 `pipeline`：客户端中途断开会把读流一起关掉，读流出错不会变成未捕获异常。`HEAD` 请求不再白读文件。热读取缓存存 Buffer，不用每个请求重算字节长度、再编码。
+
+### 改：前端
+
+- **单击她不再读回 WebGL 画布**：以前每次按下都 `visualMargins()` → `buildMask(true)`（把画布读回 CPU，要等 GPU），卡在最需要立刻响应的那一帧；而按下绝大多数是单击。现在真拖起来（位移 > 6px）那一刻才量一次。拖动中也不再每个 `pointermove` 都读 `getBoundingClientRect`（紧跟在写 `left/top` 之后强制同步重排），用按下时量好的尺寸。
+- **窗口缩放事件合并成每帧一次**：拖窗口边缘时一帧能来好几次 resize，每次都要重设 WebGL 画布尺寸（重新分配缓冲）、读两次 localStorage、贴边时还要读回画布。
+- **打字时视线不再每 40ms 强制重排输入框**：输入框矩形缓存 300ms（DSH 聊天页 DOM 一大，每秒 25 次额外重排会让打字发涩）。
+- **页面上每一次点击都跑的「选模型弹层」识别**：以前从点中元素往上 12 层、每层 `querySelector` 一遍（越往上扫的子树越大，最顶上是整页 DOM）；现在整页只扫一遍，找不到弹层就直接返回。识别行为不变（新旧代码跑同一组用例结果一致）。
+- 收起她（`setHidden`）之后，标签页「切走再切回」不再把渲染循环重新开起来（以前会在看不见的地方白白满帧渲染）。
+- 掩码采样的小画布复用（以前每次重建掩码都 `createElement('canvas')`）。
+
+### 量过、没改的（避免以后再怀疑）
+
+- **每帧的 JS 开销可以忽略**：`applyRig` ≈ 3.9µs / 帧、`resolveRig` ≈ 0.35µs 且 20 万次调用无堆增长、`gazeTick` ≈ 0.36µs、`buildMask` ≈ 0.78ms（只在布局变化时）。所以没有去「优化」`resolveRig` 的每帧分配。
+- **启动并行化**：整个启动（92 个请求）在环回上只要 ~400ms，把 3 个 vendor 脚本 / 清单并行加载省不出可测的时间，没改。
+- `preserveDrawingBuffer` / `antialias`：画布只有 ~12 万像素，预期收益低，而掩码读回依赖前者，没动。
+
+### 测试
+
+- 新增 `tools/test-perf.mjs`（81 项，纯 Node）：ETag / 304 / HEAD / 热读取 / 越界仍 403（vendor、贴图、清单、音效、表情包、前端模块都测）、逐字流合并（顺序、首字、种类切换、会话隔离、丢弃、真实定时器）、读操作不写盘、统计文件原子写（含「写入中途目标文件仍是完整旧内容」和 rename 失败的退路）、起点余额复用的边界。
+- 新增 `tools/smoke-perf.mjs`（41 项，真实 Chrome）：样式、**合成帧率（含「换回连续缓动会涨到 2 倍以上」的对照，证明测量有区分度）**、单击不量掩码 / 拖动才量、画布复用、缩放合并、收起后渲染循环、打字矩形缓存、选模型识别、预烘阴影、待机降帧（静止 4 秒才降 / 待机级表演不唤醒 / 鼠标、戳她、干活立刻回满帧 / 开关）、省电模式（含刷新后保持）。前一版的 15 项在改动前的代码上如期失败；选模型识别两边都过（行为等价）。
+- 既有回归不变：`test-host` 223、`test-bond` 120、`test-stickers` 36、`test-squeak` 27、`test-press` 32、`smoke-stickers` 61、按压 / 弹簧探针 26；`smoke.mjs` 在新旧代码上都是 167 通过 / 2 失败（同样两项历史失败，数值也一样）。
+
 ## 0.6.5 — 2026-10-02
 
 > **English summary**: pressing her now squishes and springs. **Click** = a squeak (a rubber-duck sound pair, press / release)

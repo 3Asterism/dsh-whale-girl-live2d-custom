@@ -60,8 +60,10 @@ export async function loadStickers() {
 /** 一张一张预取（fetch 进 HTTP 缓存，不解码，不占内存）；低性能档不预取。 */
 async function prefetchAll() {
   if (!STK.manifest || CFG.stickers === false) return
+  // 低性能档不预取（注释一直这么写，代码却没判）。看 body 上的类而不是 import runtime.js 的 PERF：少一条循环依赖。
+  const lowPower = () => document.body.classList.contains('dshp-lowpower')
   for (const id of Object.keys(STK.manifest)) {
-    if (document.hidden) return
+    if (document.hidden || lowPower()) return
     try {
       await fetch(urlOf(id), { cache: 'force-cache' })
     } catch (e) {

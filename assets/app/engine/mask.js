@@ -59,6 +59,54 @@ function computeBands(grid, W, H, bbox) {
   return out
 }
 
+/**
+ * 采样用的小画布，复用同一张：拖完松手贴边、窗口缩放、每次点她（量留白）都会重建掩码，
+ * 以前每次都 createElement('canvas') + getContext 新建一份，纯粹的分配 / GC。
+ */
+let scratch = null
+
+function scratchCanvas(W, H) {
+  if (!scratch) {
+    const c = document.createElement('canvas')
+    scratch = { c, g: c.getContext('2d', { willReadFrequently: true }) }
+  }
+  // 只有尺寸变了才重设（设 width / height 本身会清空并重新分配画布缓冲）
+  if (scratch.c.width !== W) scratch.c.width = W
+  if (scratch.c.height !== H) scratch.c.height = H
+  return scratch
+}
+
+/**
+ * 预烘的静态阴影。
+ * 以前阴影是 `.dshp-stage{filter:drop-shadow(0 10px 20px)}`：画布每帧更新（30fps），这个模糊滤镜就每帧对整个舞台重跑一遍。
+ * 现在把她的轮廓（采样出来的 alpha，已经有了）画成一张黑色小画布，放在舞台里画布的后面，
+ * 模糊 / 下移 / 透明度用 CSS 加在这张**静态**画布上——内容不变，合成器缓存住模糊后的结果，每帧零成本。
+ * 只在掩码重建时（布局变了 / 拖完松手 / 点她量留白）重画；轮廓临时变化（戴个道具）不会马上反映，几乎看不出来。
+ * 阴影跟着舞台一起被弹簧压扁 / 弹开（它就在舞台里面）。低性能档下 CSS 直接把它藏掉。
+ */
+let shadow = null
+
+function paintShadow(rgba, W, H) {
+  const stage = R.ui && R.ui.stage
+  if (!stage) return
+  if (!shadow) {
+    const c = document.createElement('canvas')
+    c.className = 'dshp-shadow'
+    c.setAttribute('aria-hidden', 'true')
+    // 放在 DOM 里 WebGL 画布的后面（别人 querySelector('canvas') 取到的还得是 WebGL 那张——桌面壳就这么取），
+    // 用 CSS 的负 z-index 压到它下面（舞台有 isolation:isolate，不会掉到 DSH 页面后面去）
+    stage.appendChild(c)
+    shadow = { c, g: c.getContext('2d') }
+  }
+  if (shadow.c.width !== W) shadow.c.width = W
+  if (shadow.c.height !== H) shadow.c.height = H
+  const img = shadow.g.createImageData(W, H)
+  const d = img.data
+  // RGB 保持 0（黑），只留 alpha：就是她的剪影
+  for (let i = 3; i < d.length; i += 4) d[i] = rgba[i]
+  shadow.g.putImageData(img, 0, 0)
+}
+
 export function buildMask(force) {
   if (!R.app || !R.model || mask.building) return
   if (!force && performance.now() - mask.lastBuild < 300) return
@@ -68,10 +116,7 @@ export function buildMask(force) {
     if (!src || !src.width || !src.height) throw new Error('画布还没准备好')
     const W = 128
     const H = Math.max(24, Math.round((W * src.height) / src.width))
-    const c = document.createElement('canvas')
-    c.width = W
-    c.height = H
-    const g = c.getContext('2d', { willReadFrequently: true })
+    const { g } = scratchCanvas(W, H)
     g.clearRect(0, 0, W, H)
     g.drawImage(src, 0, 0, W, H)
     const data = g.getImageData(0, 0, W, H).data
@@ -107,6 +152,7 @@ export function buildMask(force) {
     mask.bands = mask.bbox ? computeBands(grid, W, H, mask.bbox) : null
     mask.dirty = false
     mask.lastBuild = performance.now()
+    paintShadow(data, W, H)
     log(
       `命中掩码 ${W}×${H}，覆盖率 ${(coverage * 100).toFixed(1)}%` +
         (mask.bbox

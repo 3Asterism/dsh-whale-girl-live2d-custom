@@ -11,7 +11,7 @@ import { BASE, CFG } from './config.js'
 import { EXPR, R, droppedParams } from './core/state.js'
 import { log } from './core/util.js'
 import { syncConds } from './director/conds.js'
-import { buildModel, loadRuntime } from './engine/runtime.js'
+import { buildModel, loadRuntime, setLowPower } from './engine/runtime.js'
 import { squeak } from './engine/squeak.js'
 import { buildUI } from './ui/build.js'
 import { STK, loadStickers } from './ui/sticker.js'
@@ -48,6 +48,7 @@ async function main() {
       log(`已忽略 ${droppedParams.size} 个模型里不存在的参数引用：`, Array.from(droppedParams).join('、'))
     }
     await buildModel()
+    if (CFG.lowPower) setLowPower(true) // 省电模式：上次开过就接着开（设置页里的开关）
     squeak.setOn(CFG.sound) // 按压音效：开关 / 音量（本地偏好已在 config.js 里盖过宿主默认）
     squeak.setVolume(CFG.soundVol)
     wireInteractions()

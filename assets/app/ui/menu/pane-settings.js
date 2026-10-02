@@ -6,6 +6,7 @@ import { R } from '../../core/state.js'
 import { readLayout, saveLayout } from '../../core/storage.js'
 import { $, clamp } from '../../core/util.js'
 import { gazeCfg } from '../../engine/gaze.js'
+import { PERF, setLowPower } from '../../engine/runtime.js'
 import { squeak } from '../../engine/squeak.js'
 import { applyPosition, clampPanels, fitModel } from '../layout.js'
 import { closePanels, setHidden } from '../panels.js'
@@ -133,8 +134,28 @@ export function renderSettingsPane(panes, rerender) {
     sndBtn.textContent = sndLabel(CFG.sound)
     saveLayout({ sound: CFG.sound })
   })
+  // 省电模式（低性能档）：以前只有桌面壳的菜单能开，网页端没有入口。20 帧、1 倍分辨率、去掉舞台阴影和忙碌点动画、
+  // 不自言自语不自己找戏——点她才动。也是这台机器上这个人的偏好；桌面壳的菜单仍然可以覆盖它。
+  const lowLabel = (on) => (on ? '省电模式：开' : '省电模式：关')
+  const lowBtn = $('button', 'dshp-btn', lowLabel(PERF.low))
+  lowBtn.title = '开 = 20 帧、1 倍分辨率、去掉舞台阴影、不自言自语也不自己找戏，只眨眼 + 轻微摆动 + 视线，点了她才动。笔记本想省电 / 风扇狂转时开。'
+  lowBtn.addEventListener('click', () => {
+    const on = setLowPower(!PERF.low)
+    CFG.lowPower = on
+    lowBtn.textContent = lowLabel(on)
+    saveLayout({ lowPower: on })
+  })
+  // 待机降帧：她静止 4 秒后自动降到 15 帧（渲染占用约减半），鼠标一动 / 有事件立刻回 30 帧。默认开
+  const idleLabel = (on) => (on ? '待机降帧：开' : '待机降帧：关')
+  const idleBtn = $('button', 'dshp-btn', idleLabel(CFG.idleThrottle !== false))
+  idleBtn.title = '开 = 她静止 4 秒后自动降到 15 帧（电脑更凉快、更省电），鼠标一动或有事件立刻回到 30 帧。嫌待机时呼吸不够顺就关掉。'
+  idleBtn.addEventListener('click', () => {
+    CFG.idleThrottle = CFG.idleThrottle === false
+    idleBtn.textContent = idleLabel(CFG.idleThrottle !== false)
+    saveLayout({ idleThrottle: CFG.idleThrottle })
+  })
   const sndRow = $('div', 'dshp-row')
-  sndRow.append(sndBtn)
+  sndRow.append(sndBtn, lowBtn, idleBtn)
   const volLabel = $('label', 'dshp-label')
   volLabel.append($('span', null, '音效音量'))
   const vol = document.createElement('input')

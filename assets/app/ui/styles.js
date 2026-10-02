@@ -26,9 +26,19 @@ const PET_CSS = `
 body.dshp-pet-hidden .dshp-tab{display:flex}
 .dshp-tab:hover{transform:translateY(-1px)}
 @media (prefers-color-scheme:dark){.dshp-root{--dshp-fg:#eaf0ff;--dshp-bg:rgba(18,26,48,.95);--dshp-line:rgba(140,175,255,.20);--dshp-accent:#7b9bff}}
-.dshp-stage{position:absolute;left:0;bottom:0;pointer-events:none;
-  filter:drop-shadow(0 10px 20px rgba(0,0,0,.24))}
+.dshp-stage{position:absolute;left:0;bottom:0;pointer-events:none;isolation:isolate}
 .dshp-stage canvas{display:block;pointer-events:none}
+/* 阴影：mask.js 里按她的剪影预烘的一张静态黑色小画布，放在 WebGL 画布后面。
+   以前是 .dshp-stage 上的 filter:drop-shadow(0 10px 20px)——画布每帧更新、滤镜就每帧整个舞台重跑；
+   现在模糊加在这张内容不变的画布上，合成器缓存结果，每帧零成本。blur(14px) / .28 是截图肉眼对着旧的 drop-shadow 调的（同为白底）。 */
+.dshp-stage canvas.dshp-shadow{position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;
+  transform:translateY(10px);filter:blur(14px);opacity:.28}
+/* 低性能档（setLowPower / 设置页「省电模式」）。body 上早就会挂 dshp-lowpower，但以前没有任何样式认它——
+   开了低性能也照样跑着：阴影和忙碌点的动画。现在它们都关掉。 */
+.dshp-lowpower .dshp-stage canvas.dshp-shadow{display:none}
+.dshp-lowpower .dshp-dot.dshp-pulse{animation:none}
+/* 气泡 / 面板 / HUD 不用 backdrop-filter（毛玻璃）：它们的底色本来就是 95~96% 不透明，模糊几乎看不出来，
+   却要在背后任何东西重绘时（agent 干活时 DSH 页面一直在刷）把背后那一块重新模糊一遍。 */
 .dshp-bubble{position:absolute;left:50%;bottom:100%;
   transform:translate(calc(-50% + var(--dshp-shift,0px)),calc(6px + var(--dshp-shift-y,0px))) scale(.96);
   margin-bottom:calc(10px * var(--dshp-s));min-width:calc(110px * var(--dshp-s));
@@ -36,7 +46,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   background:var(--dshp-bg);color:var(--dshp-fg);border:1px solid var(--dshp-line);
   border-radius:calc(var(--dshp-radius) * var(--dshp-s));
   padding:calc(9px * var(--dshp-s)) calc(12px * var(--dshp-s)) calc(8px * var(--dshp-s));
-  box-shadow:0 8px 28px rgba(10,14,30,.18);backdrop-filter:blur(14px) saturate(1.3);
+  box-shadow:0 8px 28px rgba(10,14,30,.18);
   font-size:calc(12.5px * var(--dshp-s));line-height:1.55;opacity:0;visibility:hidden;
   transition:opacity .18s ease,transform .18s ease;overflow-wrap:anywhere;word-break:break-word}
 .dshp-bubble.dshp-on{opacity:1;visibility:visible;
@@ -56,7 +66,11 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   font-size:calc(10.5px * var(--dshp-s));letter-spacing:.04em;color:var(--dshp-accent);font-weight:600}
 .dshp-dot{width:calc(6px * var(--dshp-s));height:calc(6px * var(--dshp-s));
   border-radius:50%;background:var(--dshp-accent);flex:none}
-.dshp-dot.dshp-pulse{animation:dshp-pulse 1.1s ease-in-out infinite}
+/* 「在忙」的小圆点。性能：连续缓动（ease-in-out）的无限动画会让合成器每个 vsync 都出一帧——
+   忙碌气泡在 agent 干活期间一直挂着，实测纯待机每秒 29 个合成帧（= 画布 30fps），挂上这个点就涨到 100 个（3.4 倍）。
+   换成阶梯缓动 steps(4)：数值只在台阶上变（一胀一缩各 4 档），合成帧回到 ~22，看起来还是在呼吸。
+   （steps 的档数不是越多越好：实测 5 档起合成帧又开始涨，8 档约 40。）*/
+.dshp-dot.dshp-pulse{animation:dshp-pulse 1.1s steps(4) infinite}
 @keyframes dshp-pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
 .dshp-msg{display:flex;align-items:center;gap:calc(8px * var(--dshp-s))}
 .dshp-msg .dshp-body{flex:1 1 auto;min-width:0}
@@ -143,7 +157,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   background:var(--dshp-bg);color:var(--dshp-fg);
   border:1px solid var(--dshp-line);border-radius:calc(var(--dshp-radius) * var(--dshp-ps));
   padding:calc(10px * var(--dshp-ps));
-  box-shadow:0 14px 40px rgba(10,14,30,.26);backdrop-filter:blur(16px) saturate(1.3);
+  box-shadow:0 14px 40px rgba(10,14,30,.26);
   opacity:0;visibility:hidden;transition:opacity .16s ease,transform .16s ease;
   font-size:calc(12px * var(--dshp-ps))}
 /* 面板在缩放被冻结时不能再跟着动，否则拖「大小」滑块的时候轨道会从鼠标底下跑掉 */
@@ -249,7 +263,7 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   background:var(--dshp-bg);color:var(--dshp-fg);
   border:1px solid var(--dshp-line);border-radius:calc(var(--dshp-radius) * var(--dshp-ps));
   padding:calc(13px * var(--dshp-ps)) calc(14px * var(--dshp-ps)) calc(10px * var(--dshp-ps));
-  box-shadow:0 20px 54px rgba(10,14,30,.34);backdrop-filter:blur(18px) saturate(1.4);
+  box-shadow:0 20px 54px rgba(10,14,30,.34);
   opacity:0;visibility:hidden;
   transition:opacity .18s ease,transform .18s cubic-bezier(.2,.9,.3,1);
   font-size:calc(12px * var(--dshp-ps))}
