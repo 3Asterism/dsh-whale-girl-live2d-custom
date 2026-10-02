@@ -4,8 +4,10 @@ import { handleEvent } from '../behavior/events.js'
 import { idle } from '../behavior/idle.js'
 import { menuStatusLine, playAction } from '../behavior/menu-actions.js'
 import { PAGE, pageIntent } from '../behavior/page.js'
+import { SOUL, checkLowBalance, soulTick } from '../behavior/soul.js'
 import { pokeState, pokeTier, pokeTierForGaps } from '../behavior/poke.js'
 import { resetEverything } from '../behavior/reset.js'
+import { CFG } from '../config.js'
 import { EXPR, R, activeSubagents, agent, bond, droppedParams } from '../core/state.js'
 import { bondAct, bondAwayCheck, bondRefresh, feedGift, maybeOfferStory, playStory, setBondEnabled } from '../behavior/bond.js'
 import { FLAG } from '../director/conds.js'
@@ -22,6 +24,7 @@ import { MOOD_FACE } from '../persona/moods.js'
 import { FACE_ACT, PROP_ACT, SCENE_ACT } from '../persona/reactions.js'
 import { closeHud, hud, hudFetch, openHud } from '../ui/hud.js'
 import { headScreenX } from '../ui/layout.js'
+import { STK, stickerOk } from '../ui/sticker.js'
 import { setHidden } from '../ui/panels.js'
 
 // ——————————————————————————————————————————————————————————————
@@ -77,6 +80,8 @@ window.DSHPet = {
       DIR.cool.clear()
       DIR.habit.clear()
       DIR.cur = null
+      DIR.lastUser = -1e9 // 测试用：清掉「刚互动过 / 刚主动说过话」的记录，发呆搭话的前置条件才干净
+      DIR.lastProactive = -1e9
     },
     chat: () => chatLevel(),
   },
@@ -94,6 +99,33 @@ window.DSHPet = {
   },
   /** DSH 界面操作识别：最近点过的标签（校准 PAGE_ACTIONS 用）、手动触发一个界面动作。 */
   page: { recent: () => PAGE.recent.slice(), intent: (k) => pageIntent(k) },
+  /** 表情包 / 新场景诊断（测试 & 预览用）：气泡现在的样子、直接丢一张图、改开关、清去重记录、看 soul 状态。 */
+  stickers: {
+    state: () => {
+      const b = R.ui.bubble
+      const img = b.el.querySelector('.dshp-sticker')
+      const r = img ? img.getBoundingClientRect() : null
+      return {
+        visible: b.visible,
+        solo: b.solo,
+        sticker: b.stickerSrc,
+        text: b.el.querySelector('.dshp-body').textContent,
+        size: r ? Math.round(r.width) : 0,
+        enabled: stickerOk(),
+        count: STK.manifest ? Object.keys(STK.manifest).length : 0,
+      }
+    },
+    show: (id, opts) => R.ui.bubble.sticker(id, opts || {}),
+    hide: () => R.ui.bubble.hide(),
+    cfg: (patch) => Object.assign(CFG, patch || {}),
+    reset: () => {
+      STK.recent.clear()
+      STK.lastAt = 0
+    },
+    lowBalance: () => checkLowBalance(), // 测「余额不足要米」：按当前 hud.data 判断一次
+    idleTick: (ctx) => soulTick(ctx), // 测发呆搭话：手动喂一个 { typing, sleeping }
+    soul: () => JSON.parse(JSON.stringify(SOUL, (k, v) => (k === 'timers' || k === 'timer' ? undefined : v))),
+  },
   /** 诊断用：直接喂一条宿主事件（跟 SSE 推来的一样），撞车测试 / 预览服务器用。 */
   sim: (m) => handleEvent(m),
   /**

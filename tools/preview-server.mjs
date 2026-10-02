@@ -37,12 +37,15 @@ const MIME = {
   '.js': 'application/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
+  '.gif': 'image/gif',
   '.html': 'text/html; charset=utf-8',
   '.moc3': 'application/octet-stream',
 }
 
 const clients = new Set()
 /** 预览用的「上一轮消耗」：turn-end 事件里带的 tokens 直接折算成金额，模拟宿主记账 */
+/** 预览用的钱包余额（元，CNY）；GET /__balance?v=4.2 可改，用来测「余额不足 5 元要米」。 */
+let previewBalance = 42.5
 let previewLastTurn = { ok: true, seq: 0, turn: null, amount: null, tokens: null, ts: null }
 
 function broadcast(payload) {
@@ -225,6 +228,18 @@ const server = http.createServer((req, res) => {
     })
     return
   }
+  // 表情包（赤风RED《蓝色大肥鱼》，已压成气泡尺寸），和真机宿主的 /dsh-pet/stickers 路由一致：只放行 .gif / .json
+  if (url.startsWith('/dsh-pet/stickers/')) {
+    const rel = decodeURIComponent(url.slice('/dsh-pet/stickers/'.length))
+    const ext = path.extname(rel).toLowerCase()
+    if (rel.includes('..') || (ext !== '.gif' && ext !== '.json')) return send(res, 403, 'text/plain; charset=utf-8', 'forbidden')
+    return serveFile(res, path.join(ASSETS, 'stickers', rel))
+  }
+  if (url === '/__balance') {
+    const v = Number(new URL(req.url, 'http://x').searchParams.get('v'))
+    if (Number.isFinite(v)) previewBalance = v
+    return send(res, 200, MIME['.json'], JSON.stringify({ ok: true, balance: previewBalance }))
+  }
   if (url.startsWith('/dsh-pet/model/')) {
     // 动作文件名是中文的，浏览器会发百分号编码，这里必须解回来，
     // 否则 /dsh-pet/model/motions/%E8%87%AA%E6%8B%8D.motion3.json 会 404。
@@ -253,7 +268,7 @@ const server = http.createServer((req, res) => {
       source: 'dsh-live2d-pet',
       isPeak: peak,
       peakNextChangeAt: nextChange,
-      balance: { ok: true, totalBalance: 42.5, currency: 'CNY', updatedAt: new Date().toISOString() },
+      balance: { ok: true, totalBalance: previewBalance, currency: 'CNY', updatedAt: new Date().toISOString() },
       today: { date: '2026-09-25', amount: 3.86, tokens: 1286000 },
       turn: previewLastTurn,
       stats: (() => {
@@ -279,7 +294,7 @@ const server = http.createServer((req, res) => {
     return send(res, 200, MIME['.json'], JSON.stringify({
       ok: true,
       version: '0.3.9(预览假数据)',
-      totalBalance: 42.5,
+      totalBalance: previewBalance,
       currency: 'CNY',
       isPeak,
       peakNextChangeAt: nextChange,

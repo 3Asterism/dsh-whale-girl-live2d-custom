@@ -13,6 +13,7 @@ import { R } from '../core/state.js'
 import { PRI, noteUser, perform } from '../director/perform.js'
 import { PAGE_ACTIONS, PAGE_INTENTS } from '../persona/page-actions.js'
 import { bondAwayCheck, bondMemory } from './bond.js'
+import { noteModelPick, noteRegen } from './soul.js'
 
 /** 最近点过的标签（只存标签，本地内存，不上传；DSHPet.page.recent() 供校准识别表）。 */
 export const PAGE = { recent: [] }
@@ -24,6 +25,29 @@ export function pageIntent(key) {
   // 同一个 intent id 的冷却同时给「DOM 点击」和「宿主 session/created」去重：谁先到谁演
   perform(Object.assign({ id: 'page-' + key, pri: PRI.CUE, say: key }, d))
   if (key === 'newSession') bondMemory('new-page')
+  if (key === 'regen') noteRegen() // 2 分钟内点了 3 次「重新生成」：她会抱头
+}
+
+/**
+ * 模型下拉里的点选：弹层里带「搜索模型…」输入框，点中的那一项文字像个模型名（带版本号数字，
+ * 这样点分组标题「silicon-flow」「DeepSeek 账号」不会被当成选模型）。返回点中那一项的文字，不是就 null。
+ */
+const MODEL_SEARCH = 'input[placeholder*="搜索模型"],input[placeholder*="earch model" i]'
+function modelPickLabel(target) {
+  if (!target || !target.closest) return null
+  if (target.closest('input,textarea')) return null
+  let p = target
+  let popup = null
+  for (let i = 0; i < 12 && p; i++, p = p.parentElement) {
+    if (p.querySelector && p.querySelector(MODEL_SEARCH)) {
+      popup = p
+      break
+    }
+  }
+  if (!popup) return null
+  const item = target.closest('[role="option"],[role="menuitem"],li,button,[data-value]') || target
+  const text = (item.textContent || '').replace(/\s+/g, ' ').trim()
+  return text.length >= 3 && text.length <= 80 && /[A-Za-z]/.test(text) && /\d/.test(text) ? text : null
 }
 
 export function wirePageAwareness() {
@@ -33,6 +57,12 @@ export function wirePageAwareness() {
       try {
         if (CFG.pageAware === false) return
         if (R.ui && R.ui.root && R.ui.root.contains(e.target)) return // 她自己的界面不算
+        const picked = modelPickLabel(e.target)
+        if (picked) {
+          noteUser()
+          noteModelPick(picked)
+          return
+        }
         const el = e.target && e.target.closest ? e.target.closest('button,[role="button"],[role="menuitem"],[role="tab"],a[href],[aria-label]') : null
         if (!el) return
         const label = (el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40)

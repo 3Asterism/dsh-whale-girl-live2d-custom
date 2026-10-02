@@ -1,5 +1,44 @@
 # 更新日志 / Changelog
 
+## 0.6.1 — 2026-10-02
+
+> **English summary**: meme stickers and more soul. Her lines now carry a small GIF (92 stickers from 赤风RED's
+> "蓝色大肥鱼" pack, compressed from 460 MB to 10.5 MB, shown ≈44 px next to the text) — and a sticker never
+> lengthens a bubble. She also notices more of DSH: deep thinking, switching to another vendor's model,
+> permission changes, her own questions, repeated failures ("坐牢" / "This is fine"), a rejected proposal
+> ("小丑竟是我自己"), a wallet under ¥5 ("要米") and you staring at the input box.
+
+### 新：表情包（素材：赤风RED「蓝色大肥鱼」）
+
+- 台词后面跟一张 GIF；绝大部分台词都配图，实在没法适配才不配。图按**梗的真实含义**用：坐牢＝又失败了、小丑＝提议被拒、要米＝余额不足、
+  一切都好＝连续失败还硬撑、带薪拉屎＝工具跑太久她摸鱼……梗表见 `docs/表情包设计.md`。
+- 有些时刻**只丢一张图**：深度思考时的「正在思考」、余额 < 5 元的「要米」。
+- 压缩：157 张 / 460MB → 92 张 / 10.5MB（96×96、25fps、63 色），**仓库里只存压好的**，原图不分发。显示约 44px（略大于字符）。
+- **绝不拖长气泡**：气泡停留由台词决定；选图时只挑一圈 ≤ ttl+400ms 的，到点最多多等 400ms 让当前圈播完，没播完就跟着气泡淡出。
+- 设置里「互动开关」新增「表情包」「发呆搭话」两个开关；`prefers-reduced-motion` 下不显示。
+- 版权：README / `AUTHORS.md` / `NOTICE.md` / `PROVENANCE.md` / `package.json` 补上赤风RED的署名（版权归她，条款以她为准，仅非商业分发）。
+
+### 新：她能看见更多 DSH 里的事
+
+- **深度思考**（reasoning 增量，之前一直被丢弃）→ 「正在思考」；想得特别久（30s / 90s）才补一句话。
+- **换模型 / 调推理强度**（`model/selection`、`request/header`）→ 换成别家吃醋（不说品牌）、换回 DeepSeek 欢迎回来；
+  DSH 模型下拉里的点选也识别（DOM 兜底）。
+- **权限放开 / 收紧**（`sandbox/mode`）、**斜杠命令**（只转命令名，不转参数）、**换智能体预设**、**定时任务**（新建 / 到点）。
+- **她向你提问**（`ask_user_question`）等 60 秒没回应就摇铃；**连着失败**按「停止工作 → 坐牢 → 一切都好」升级；**你反复点重新生成**她会抱头；
+  **你发呆**（输入框写了一半停着 / 页面 2 分钟没动静，仅话痨档）她会探头问一句。
+
+### 修
+
+- 新建会话后、发第一条消息之前选模型 / 改权限，事件会被当成「非当前会话」丢掉（切别家模型没反应的原因）。现在人新建的空白会话立刻成为当前会话，
+  选择类事件对非子代理会话一律放行。
+- 带表情包的气泡里文字被挤成窄列（气泡宽度受根节点一半宽度限制）。
+- 工作轮播每隔几秒换一句忙碌台词，会把正在播的「正在思考」一起清掉。
+
+### 测试
+
+`tools/test-stickers.mjs`（32 项：数据完整性、每个台词 id 都配了图、选图 / 时长规则）、`tools/smoke-stickers.mjs`（真浏览器 35 项）、
+`tools/test-host.mjs` 新增表情包路由与新事件映射用例（219 项）。
+
 ## 0.6.0 — 2026-10-02
 
 > **English summary**: she now feels alive. A director (`perform()` priorities, cooldowns, habituation,

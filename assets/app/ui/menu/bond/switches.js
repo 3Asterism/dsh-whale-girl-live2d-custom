@@ -69,9 +69,11 @@ export function renderSwitches(snap, rerender) {
       hint: '22:00–06:00 自动换深色桌布。默认关：她待机的样子不该自己变。',
       onChange: () => syncConds(),
     })
-    toggleRow(body, { key: 'pageAware', label: '界面操作反应', hint: '你点新建会话、开设置、换主题这类 DSH 界面按钮时，她会有反应。只读不拦截，不影响 DSH 本身。' })
+    toggleRow(body, { key: 'pageAware', label: '界面操作反应', hint: '你点新建会话、开设置、换主题这类 DSH 界面按钮，或者换模型、改权限、她向你提问时，她会有反应。只读不拦截，不影响 DSH 本身。' })
     toggleRow(body, { key: 'keywords', label: '关键词反应', hint: '你说「谢谢」「晚安」「饿了」之类的口语短句时她会接话；只在本地匹配，不上传、不落盘。' })
     toggleRow(body, { key: 'routine', label: '日常提醒', hint: '饭点、下午茶、喝水、久坐、深夜。只在空闲时出气泡，不弹面板，错过就算了，不补播。' })
+    toggleRow(body, { key: 'stickers', label: '表情包', hint: '她说话时，台词后面跟一张小表情包（赤风RED《蓝色大肥鱼》）；深度思考、余额不足、提议被拒这类时刻也会只丢一张图。图不会拖长气泡，只是点缀。关掉就只有文字。' })
+    toggleRow(body, { key: 'idleChat', label: '发呆搭话', hint: '你在输入框里写了一半停着不动、或者开着 DSH 很久没动静时，她偶尔冒出来问一句。只在话痨档出现，一天不会很多次。' })
     toggleRow(body, { key: 'typing', label: '打字互动', hint: '你在输入框打字时她看着输入框；把写了一半的长句全删掉，她会假装什么都没看见。' })
 
     // 番茄钟：唯一需要主动开的功能

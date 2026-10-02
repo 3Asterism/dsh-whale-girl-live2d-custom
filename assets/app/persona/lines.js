@@ -10,6 +10,7 @@
 import { bond } from '../core/state.js'
 import { pickFresh } from '../core/util.js'
 import { BOND_LINES } from './lines-bond.js'
+import { SOUL_LINES } from './lines-soul.js'
 
 const CORE_LINES = {
   // —— 触碰 ——
@@ -136,7 +137,7 @@ const CORE_LINES = {
   levelUp: ['（小声）和主人的关系变成「{name}」了…', '升级啦！我们现在是「{name}」～'],
 }
 
-const LINES = { ...CORE_LINES, ...BOND_LINES }
+const LINES = { ...CORE_LINES, ...BOND_LINES, ...SOUL_LINES }
 
 /**
  * 取一句台词：按台词档分（有分档池时 70% 用本档，其余用通用池），同池不连续重复。

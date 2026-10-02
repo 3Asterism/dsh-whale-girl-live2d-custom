@@ -64,6 +64,7 @@ export function workTick() {
       name: '鲸鱼娘',
       busy: true,
       sticky: true,
+      keepSticker: true, // 别把正在播的「正在思考」顶掉
     })
     noteProcess(stepDef.mood === 'reading' ? '看资料' : '思考中')
   }

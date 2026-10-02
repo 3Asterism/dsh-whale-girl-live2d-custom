@@ -58,7 +58,24 @@ body.dshp-pet-hidden .dshp-tab{display:flex}
   border-radius:50%;background:var(--dshp-accent);flex:none}
 .dshp-dot.dshp-pulse{animation:dshp-pulse 1.1s ease-in-out infinite}
 @keyframes dshp-pulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.25)}}
+.dshp-msg{display:flex;align-items:center;gap:calc(8px * var(--dshp-s))}
+.dshp-msg .dshp-body{flex:1 1 auto;min-width:0}
 .dshp-body{max-height:150px;overflow:auto;white-space:pre-wrap}
+/* 表情包（赤风RED《蓝色大肥鱼》，已压成 96×96）：显示 44px ≈ 字号 3.5 倍，跟在台词后面；
+   不拦鼠标，不挡下面的页面。到点没播完就跟着气泡淡出（见 bubble.js：气泡停留时间永远由台词决定）。 */
+.dshp-sticker{flex:none;display:block;width:max(28px,calc(44px * var(--dshp-s)));height:max(28px,calc(44px * var(--dshp-s)));
+  object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;transition:opacity .3s ease}
+/* 气泡是 left:50% 的绝对定位，可容纳宽度只剩根节点的一半，文字会被挤成窄列（工具栏也踩过同一个坑）。
+   带图时用 max-content 撑开，上限仍是 max-width。 */
+.dshp-bubble.dshp-has-sticker{width:max-content}
+.dshp-sticker.dshp-opaque{border-radius:calc(8px * var(--dshp-s))}
+.dshp-sticker.dshp-out{opacity:0}
+/* 只有一张图的小气泡：藏掉名字 / 文字 / 脚注，图放大一点（没有文字陪衬，要看得清脸） */
+.dshp-bubble.dshp-solo{min-width:0;padding:calc(6px * var(--dshp-s))}
+.dshp-solo .dshp-head,.dshp-solo .dshp-body,.dshp-solo .dshp-foot{display:none}
+.dshp-solo .dshp-msg{gap:0}
+.dshp-solo .dshp-sticker{width:max(36px,calc(56px * var(--dshp-s)));height:max(36px,calc(56px * var(--dshp-s)))}
+@media (prefers-reduced-motion:reduce){.dshp-sticker{display:none}}
 .dshp-body::-webkit-scrollbar{width:5px}
 .dshp-body::-webkit-scrollbar-thumb{background:var(--dshp-line);border-radius:3px}
 .dshp-foot{margin-top:calc(4px * var(--dshp-s));font-size:calc(10px * var(--dshp-s));opacity:.55;min-height:0}

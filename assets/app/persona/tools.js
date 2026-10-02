@@ -36,7 +36,8 @@ export const TOOL_LINE = {
   subagent: ['（招手）叫个分身来帮忙', '人家派个分身去办', '（分工）这就安排'],
   subagent_fork: ['（招手）叫个分身来帮忙', '人家派个分身去办'],
   workflow: ['（排兵布阵）同时开几路', '人家把活儿分一下'],
-  ask_user_question: ['（歪头）这个得问问主人', '人家不确定，问一下'],
+  ask_user_question: ['（举牌）主人，人家有个问题', '（歪头）这个得问问主人', '人家不敢擅自决定，主人看一眼嘛'],
+  read_image: ['（凑近）让人家好好看看这张图', '（戴眼镜）图片…看到了看到了', '人家看看里面画了啥'],
   present: ['（举起来）喏，给你', '人家交付啦', '（递过去）弄好了'],
   pdf_create: ['（排版）给你出一份文档', '人家做份文档'],
   docx_create: ['（排版）给你出份文档', '人家写份文档'],
@@ -94,6 +95,7 @@ export function randomGlasses() {
 export const TOOL_REACT = {
   // —— 阅读 / 检索：认真看（眼镜随机：圆框 / 半框方框 / 不戴），低头看本子 ——
   read: { mood: 'reading', prop: 'auto' },
+  read_image: { mood: 'reading', prop: 'auto' },
   glob: { mood: 'thinking', prop: 'auto' },
   grep: { mood: 'reading', prop: 'auto' },
   web_fetch: { mood: 'reading', prop: 'auto' },

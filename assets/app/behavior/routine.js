@@ -1,6 +1,7 @@
 /** behavior/routine.js —— 由 tools/split-front.mjs 从 pet.js 拆出；模块职责见 assets/app/README.md */
 
 import { maybeOfferStory } from './bond.js'
+import { checkLowBalance } from './soul.js'
 import { CFG } from '../config.js'
 import { R, agent, bond } from '../core/state.js'
 import { FLAG, syncConds } from '../director/conds.js'
@@ -19,6 +20,7 @@ export function onTurnFinished() {
   setTimeout(async () => {
     try {
       await hudFetch(false)
+      checkLowBalance().catch(() => {}) // 余额 < 5 元：要米（每天最多一次）
       const s = hud.stats
       if (!s) return
       for (const [field, marks, say, fmt] of MILESTONES) {

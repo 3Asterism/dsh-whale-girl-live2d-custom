@@ -7,6 +7,7 @@ import { digest } from '../director/digest.js'
 import { PRI, perform } from '../director/perform.js'
 import { qBounce } from '../engine/effects.js'
 import { bondAct } from './bond.js'
+import { handleSoulSev } from './soul.js'
 
 // ——————————————————————————————————————————————————————————————
 // 白名单事件（宿主裁剪后推来的 sev）与新建会话
@@ -61,6 +62,9 @@ export function handleSev(m) {
       if (up) bondAct('praise')
       break
     }
+    // v0.6.1：模型切换 / 权限 / 斜杠命令 / 智能体预设 / 定时任务（见 behavior/soul.js）
+    default:
+      handleSoulSev(m)
   }
 }
 

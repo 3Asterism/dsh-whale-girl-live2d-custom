@@ -7,6 +7,7 @@ import { TYPING } from './page.js'
 import { onTurnFinished } from './routine.js'
 import { noteReplyText, reactToUserText, replyMood } from './sentiment.js'
 import { handleSev, sessionCreated } from './sev.js'
+import { noteAskDone, noteAskUser, noteThinking, stopThinking } from './soul.js'
 import { BASE, CFG } from '../config.js'
 import { EXPR, R, activeSubagents, agent } from '../core/state.js'
 import { log, pick, pickFresh } from '../core/util.js'
@@ -22,6 +23,7 @@ import { IDLE_PROPS, WORK_PROPS } from '../persona/items.js'
 import { isDangerous } from '../persona/keywords.js'
 import { lineFor } from '../persona/lines.js'
 import { SAY } from '../persona/say.js'
+import { START_STICKER, STICKY_GAP_MS, THINKING_STICKER, TOOL_STICKER } from '../persona/stickers.js'
 import { DEVICE_TOOLS, TOOL_LINE, TOOL_REACT, randomGlasses, toolHint } from '../persona/tools.js'
 import { hud, hudFetch, hudPopTurnEnd, hudRender } from '../ui/hud.js'
 import { closePanels } from '../ui/panels.js'
@@ -123,7 +125,7 @@ export function handleEvent(m) {
       // 刚有一句更重要的话（关键词反应 / 问候）在气泡里，就别马上拿「好啦好啦」顶掉它
       const busyNow = performingNow()
       if (!busyNow || busyNow.pri === PRI.AMBIENT || busyNow.pri === PRI.TOUCH) {
-        R.ui.bubble.show(pick(SAY.start), { name: '鲸鱼娘', busy: true, sticky: true })
+        R.ui.bubble.show(pick(SAY.start), { name: '鲸鱼娘', busy: true, sticky: true, stickerHint: { pool: START_STICKER, gapMs: STICKY_GAP_MS } })
       }
       break
     }
@@ -133,13 +135,16 @@ export function handleEvent(m) {
       setStatus('thinking')
       rig.talking = false
       if (!R.ui.bubble.visible) {
-        R.ui.bubble.show(pickFresh(SAY.thinking, 'thinking'), { name: '鲸鱼娘', busy: true, sticky: true })
+        R.ui.bubble.show(pickFresh(SAY.thinking, 'thinking'), { name: '鲸鱼娘', busy: true, sticky: true, stickerHint: { pool: THINKING_STICKER, gapMs: STICKY_GAP_MS } })
       } else {
         noteProcess('正在思考 · 第 ' + m.step + ' 步')
       }
       break
 
     case 'delta':
+      // 深度思考：reasoning 增量宿主一直在推。默认不显示内容，但「她在想」这个事实可以演一张表情包
+      if (m.kind === 'reasoning') noteThinking()
+      else stopThinking()
       if (m.kind === 'reasoning' && !CFG.showReasoning) return
       agent.lastActivity = Date.now()
       if (!agent.hasStream) {
@@ -155,6 +160,7 @@ export function handleEvent(m) {
       break
 
     case 'assistant':
+      stopThinking()
       agent.hasStream = false
       rig.talking = false
       if (m.interrupted) break
@@ -172,6 +178,7 @@ export function handleEvent(m) {
       break
 
     case 'tool-call': {
+      stopThinking()
       setStatus('working')
       rig.talking = false
       const react = TOOL_REACT[m.name] || { mood: 'reading', prop: 'glassesRound' }
@@ -207,7 +214,12 @@ export function handleEvent(m) {
         name: '鲸鱼娘',
         busy: true,
         sticky: true,
+        // 提问 / 看图是「有意义的事件」，每次都配；其余工具的常驻气泡节流（gapMs），干活时图不会一直在换
+        stickerHint: TOOL_STICKER[m.name] && (m.name === 'ask_user_question' || m.name === 'read_image'
+          ? { sticker: TOOL_STICKER[m.name] }
+          : { pool: TOOL_STICKER[m.name], gapMs: STICKY_GAP_MS }),
       })
+      if (m.name === 'ask_user_question' && m.callId) noteAskUser(m.callId) // 问了主人，等太久就摇铃
       noteProcess(m.label || m.name)
 
       // 工具跑太久：30 秒「偷偷摸鱼」，90 秒「我去睡了，明早应该就好了」（梗：思考链里的下班名场面）
@@ -233,6 +245,7 @@ export function handleEvent(m) {
     }
 
     case 'tool-result': {
+      noteAskDone(m.callId)
       clearToolProp()
       const slow = longToolTimers.get(m.callId)
       if (slow) {
@@ -277,6 +290,8 @@ export function handleEvent(m) {
     }
 
     case 'turn-end': {
+      stopThinking()
+      noteAskDone()
       const kind = (m.reason && m.reason.kind) || m.reason || 'completed'
       rig.talking = false
       agent.hasStream = false
@@ -367,12 +382,19 @@ export function handleEvent(m) {
         const em = (m.reason && m.reason.error && m.reason.error.message) || '出错了'
         // 连着失败 2 次以上（或一轮里报了 3 次以上错）：不再自嘲，站在主人这边把锅给 bug
         const streak = FLAG.fails >= 2 || digest.errors >= 3
-        perform({
+        // 失败升级序列（梗按真实含义用）：第 1 次「停止工作」弹窗 → 连着 2 次/同轮报错≥3 次「坐牢」→ 连着 3 次以上「一切都好」
+        const ladder = FLAG.fails >= 3 ? 'fine' : streak ? 'jail' : 'stopped'
+        const sticker = ladder === 'fine' ? pickFresh(['fine1', 'fine2'], 'fail-fine') : ladder === 'jail' ? 'jail' : 'stopped'
+        const failLine = ladder === 'fine' ? lineFor('failFine') : ladder === 'jail' ? lineFor('failJail') : streak ? lineFor('streakFail') : pickFresh(SAY.fail, 'fail')
+        const shown = perform({
           id: 'finish-fail', pri: PRI.ALERT, tier: 'core', habit: false,
           mood: streak ? 'sad' : pick(['sweat', 'sad']),
-          line: (streak ? lineFor('streakFail') : pickFresh(SAY.fail, 'fail')) + '\n' + String(em).slice(0, 160),
+          sticker,
+          line: failLine + '\n' + String(em).slice(0, 160),
           ms: 3200,
         })
+        // 错误详情让这条气泡超过了「短台词」的长度，所以图单独附着上去（播完 ≤4s 淡出）
+        if (shown && !R.ui.bubble.stickerSrc) R.ui.bubble.sticker(sticker, {})
       } else {
         perform({ id: 'finish-other', pri: PRI.ALERT, tier: 'core', mood: 'pout', ms: 2600 })
       }

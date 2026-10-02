@@ -6,12 +6,14 @@ import { wireFeed } from './behavior/feed.js'
 import { wireInteractions } from './behavior/gestures.js'
 import { startLoops } from './behavior/idle.js'
 import { wirePageAwareness, wireTyping } from './behavior/page.js'
+import { wireSoul } from './behavior/soul.js'
 import { BASE } from './config.js'
 import { EXPR, R, droppedParams } from './core/state.js'
 import { log } from './core/util.js'
 import { syncConds } from './director/conds.js'
 import { buildModel, loadRuntime } from './engine/runtime.js'
 import { buildUI } from './ui/build.js'
+import { loadStickers } from './ui/sticker.js'
 import { hudFetch } from './ui/hud.js'
 import { injectStyle } from './ui/styles.js'
 import './api/debug.js' // 副作用导入：加载后挂出 window.DSHPet
@@ -48,7 +50,9 @@ async function main() {
     wireInteractions()
     wirePageAwareness() // DSH 界面本身的操作（新建会话 / 开设置 / 换主题…）
     wireTyping() // 输入框：打字时看着、清空 = 撤回
+    wireSoul() // 记「页面上最近一次有人动」（发呆搭话用）
     wireFeed() // 拖文件喂她
+    loadStickers() // 表情包清单（失败就静默：没有表情包她照样说话）
     connectSSE()
     startLoops()
     // 羁绊：先拉一份快照（台词分档 / 待机状态要读），稍后结算一次「离线小事件」（离开超过 2 小时才有）

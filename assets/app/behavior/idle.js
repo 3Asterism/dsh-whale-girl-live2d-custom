@@ -1,6 +1,8 @@
 /** behavior/idle.js —— 由 tools/split-front.mjs 从 pet.js 拆出；模块职责见 assets/app/README.md */
 
+import { TYPING } from './page.js'
 import { routineTick } from './routine.js'
+import { soulTick } from './soul.js'
 import { CFG } from '../config.js'
 import { EXPR, R, agent, bond } from '../core/state.js'
 import { pick, pickFresh } from '../core/util.js'
@@ -161,6 +163,8 @@ export function startLoops() {
   // 日常节律（饭点 / 喝水 / 久坐 / 深夜 / 今日账单 / 峰谷）：20 秒看一次，开机 8 秒后先看一次
   setInterval(() => routineTick().catch(() => {}), 20000)
   setTimeout(() => routineTick().catch(() => {}), 8000)
+  // 发呆搭话（输入框写了一半停着 / 一阵子没动静）：15 秒看一次，只在话痨档、她醒着、没别的在演时才出声
+  setInterval(() => soulTick({ typing: TYPING, sleeping: idle.sleep !== 0 }), 15000)
   // 羁绊快照：每 10 分钟刷一次（心情 / 饱腹是随时间变的，待机行为要读它；顺带检查有没有「待晋级」）
   setInterval(() => bondRefresh(), 10 * 60000)
 
@@ -193,7 +197,7 @@ export function startLoops() {
     if (idle.sleep === 0 && quiet > CFG.sleepAfterMs) {
       idle.sleep = 2
       setBase('sleepy', IDLE_PROPS)
-      R.ui.bubble.show(pick(['呼……呼……', '（打瞌睡）', '（趴桌上睡着了）']), { name: '鲸鱼娘', ttl: 9000 })
+      R.ui.bubble.show(pick(['呼……呼……', '（打瞌睡）', '（趴桌上睡着了）']), { name: '鲸鱼娘', ttl: 9000, sticker: 'work_nap' })
     } else if (idle.sleep === 0 && quiet > CFG.sleepAfterMs * 0.55 && Math.random() < 0.4) {
       // 打哈欠
       perform({ id: 'idle-yawn', pri: PRI.AMBIENT, tier: 'extra', habit: false, mood: 'sleepy', props: IDLE_PROPS, line: '（打了个哈欠）', ms: 2600 })

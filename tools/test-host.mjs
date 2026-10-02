@@ -167,7 +167,7 @@ check('注册了 control', exact.has('/dsh-pet/control'))
 check('注册了 state', exact.has('/dsh-pet/state'))
 check('注册了 diag', exact.has('/dsh-pet/diag'))
 check('注册了 standalone', exact.has('/dsh-pet/standalone'))
-check('注册了 model / vendor / app 前缀路由', prefixes.length === 3, prefixes.map((p) => p.path).join(', '))
+check('注册了 model / vendor / app / stickers 前缀路由', prefixes.length === 4 && prefixes.some((p) => p.path === '/dsh-pet/stickers'), prefixes.map((p) => p.path).join(', '))
 check('挂了 index 注入', indexTaps.length === 1 || (listeners.get('webserver/index-inject') || []).length === 1)
 
 const get = async (p) => {
@@ -189,6 +189,15 @@ check('前端模块按路径取（嵌套目录）', (await get('/dsh-pet/app/cor
 check('前端模块路由挡住路径穿越', (await get('/dsh-pet/app/..%2f..%2fpackage.json')).status === 403 && (await get('/dsh-pet/app/..%2f..%2flib%2findex.js')).status === 403)
 check('不存在的前端模块返回 404', (await get('/dsh-pet/app/nope.js')).status === 404)
 check('前端模块路由不放行非 .js 文件', (await get('/dsh-pet/app/main.json')).status === 403)
+
+// 表情包（赤风RED《蓝色大肥鱼》，已压成气泡尺寸）
+const stkMan = await get('/dsh-pet/stickers/manifest.json')
+const stkJson = JSON.parse(stkMan.buf.toString('utf8'))
+check('表情包清单可取（JSON，≥60 张，每张带一圈时长）', stkMan.status === 200 && stkMan.type.includes('json') && Object.keys(stkJson.stickers).length >= 60 && Object.values(stkJson.stickers).every((s) => s.ms > 0 && s.file), `${Object.keys(stkJson.stickers).length} 张`)
+const stkGif = await get('/dsh-pet/stickers/' + Object.values(stkJson.stickers)[0].file)
+check('表情包 GIF 可取且类型正确', stkGif.status === 200 && stkGif.type.includes('image/gif') && stkGif.buf.slice(0, 3).toString() === 'GIF', `${stkGif.buf.length} 字节`)
+check('表情包路由只放行 .gif/.json，并挡住路径穿越', (await get('/dsh-pet/stickers/x.png')).status === 403 && (await get('/dsh-pet/stickers/..%2f..%2fpackage.json')).status === 403 && (await get('/dsh-pet/stickers/..%2f..%2flib%2findex.js')).status === 403)
+check('不存在的表情包返回 404', (await get('/dsh-pet/stickers/nope.gif')).status === 404)
 
 const model3 = await get('/dsh-pet/model/c_0120.model3.json')
 check('model3.json 可取', model3.status === 200 && model3.type.includes('json'))
@@ -449,6 +458,20 @@ check('slim：retry 带次数与错误码，字段缺失给 null', (() => {
 check('slim：goal 取 phase', slim('goal/change', { goal: { phase: 'complete' } }).phase === 'complete' && slim('goal/change', {}).phase === null)
 check('slim：deliverables 数文件', slim('deliverables/presented', { files: [{}, {}] }).count === 2 && slim('deliverables/presented', {}).count === 1)
 check('slim：approval/policy 只认 never', slim('approval/policy', { policy: 'never' }).policy === 'never' && slim('approval/policy', { policy: 'x' }).policy === 'ask')
+check('slim：model/selection 取 provider / model / 推理强度', (() => {
+  const a = slim('model/selection', { provider: 'p', model: 'm1', reasoningEffort: 'high' })
+  return a.k === 'model' && a.src === 'selection' && a.provider === 'p' && a.model === 'm1' && a.effort === 'high'
+})())
+check('slim：request/header 取 header.config（实际在用的模型）；缺 model 不转', (() => {
+  const a = slim('request/header', { header: { config: { provider: 'p', model: 'm2' } } })
+  return a.k === 'model' && a.src === 'request' && a.model === 'm2' && a.effort === null && slim('request/header', {}) === null && slim('model/selection', { provider: 'p' }) === null
+})())
+check('slim：sandbox/mode 只认三种取值，别的给 null', slim('sandbox/mode', { mode: 'danger-full-access' }).mode === 'danger-full-access' && slim('sandbox/mode', { mode: 'x' }).mode === null)
+check('slim：command/run 只转命令名，不转 args（args 可能是用户原话）', (() => {
+  const a = slim('command/run', { commandId: 'c1', name: 'goal', args: '我的密码是 123', source: { kind: 'user' } })
+  return a.k === 'command' && a.name === 'goal' && !('args' in a) && !JSON.stringify(a).includes('密码')
+})())
+check('slim：agent-preset/selected / schedule/change / permission/preset', slim('agent-preset/selected', { agentPreset: 'coder' }).preset === 'coder' && slim('schedule/change', { operation: 'create' }).op === 'create' && slim('schedule/change', { operation: 'weird' }).op === null && slim('permission/preset', { preset: 'auto' }).preset === 'auto')
 
 const rx2 = []
 const ctl2 = new AbortController()
@@ -478,7 +501,18 @@ ev({ id: 'sess-1' }, { type: 'approval/asked', data: { id: 'a1', toolName: 'bash
 ev({ id: 'sess-1' }, { type: 'approval/decided', data: { id: 'a1', outcome: 'rejected' } })
 // 子代理的同类事件不许进主通道
 ev({ id: 'sub-9' }, { type: 'todo/write', data: { todos: [{ content: 'x', status: 'completed' }] } })
+ev({ id: 'sess-1' }, { type: 'model/selection', data: { provider: 'p', model: 'm-new', reasoningEffort: 'high' } })
+ev({ id: 'sess-1' }, { type: 'request/header', data: { header: { config: { provider: 'p', model: 'm-old' } } } })
+ev({ id: 'sess-1' }, { type: 'request/header', data: { header: { config: { provider: 'p', model: 'm-old' } } } }) // 同模型重复：只转一次
+ev({ id: 'sess-1' }, { type: 'request/header', data: { header: { config: { provider: 'p', model: 'm-new' } } } }) // 换了：再转一次
+ev({ id: 'sess-1' }, { type: 'sandbox/mode', data: { mode: 'read-only' } })
+ev({ id: 'sess-1' }, { type: 'command/run', data: { commandId: 'c1', name: 'goal', args: '秘密参数', source: { kind: 'user' } } })
+listeners.get('session/created')[0]({ id: 'sub-9', seq: 0, header: { origin: 'subagent', delegationDepth: 1 } })
+ev({ id: 'sub-9' }, { type: 'sandbox/mode', data: { mode: 'danger-full-access' } }) // 子代理的不进主通道
 listeners.get('session/created')[0]({ id: 'sess-new', seq: 0, header: { origin: 'user' } })
+// 用户新建会话、**先选模型再发话**：这时还没有人类 prompt，也得放行（之前被当成非主会话丢掉了，切模型没反应）
+ev({ id: 'sess-new' }, { type: 'model/selection', data: { provider: 'sf', model: 'blank-model-1' } })
+ev({ id: 'sess-new' }, { type: 'sandbox/mode', data: { mode: 'danger-full-access' } })
 listeners.get('feedback/committed')[0]({ events: [{ type: 'feedback/message-put', data: { item: { rating: 'positive' } } }] })
 listeners.get('feedback/committed')[0]({ events: [{ type: 'feedback/message-delete', data: {} }] }) // 取消评分：不该有反应
 await new Promise((r) => setTimeout(r, 300))
@@ -491,6 +525,12 @@ check('转发了计划模式', rx2.some((m) => m.t === 'sev' && m.k === 'plan' &
 check('转发了重试（带次数）', rx2.some((m) => m.t === 'sev' && m.k === 'retry' && m.retry === 1 && m.max === 3))
 check('批准请求带工具名', rx2.some((m) => m.t === 'approval' && m.state === 'asked' && m.tool === 'bash'))
 check('批准结果带 outcome', rx2.some((m) => m.t === 'approval' && m.state === 'decided' && m.outcome === 'rejected'))
+check('转发了换模型（selection，带强度）', rx2.some((m) => m.t === 'sev' && m.k === 'model' && m.src === 'selection' && m.model === 'm-new' && m.effort === 'high'))
+check('request/header 同模型去重，换模型才再转', rx2.filter((m) => m.t === 'sev' && m.k === 'model' && m.src === 'request').map((m) => m.model).join(',') === 'm-old,m-new', rx2.filter((m) => m.t === 'sev' && m.k === 'model' && m.src === 'request').map((m) => m.model).join(','))
+check('转发了权限变化，子代理的不进主通道', rx2.filter((m) => m.t === 'sev' && m.k === 'sandbox' && m.sessionId === 'sess-1').map((m) => m.mode).join(',') === 'read-only')
+check('转发了斜杠命令名，但不带 args', rx2.some((m) => m.t === 'sev' && m.k === 'command' && m.name === 'goal') && !JSON.stringify(rx2).includes('秘密参数'))
+check('新建会话后、发话前选模型 / 改权限也能转发（不会被当成非主会话）', rx2.some((m) => m.t === 'sev' && m.k === 'model' && m.model === 'blank-model-1' && m.sessionId === 'sess-new') && rx2.some((m) => m.t === 'sev' && m.k === 'sandbox' && m.mode === 'danger-full-access' && m.sessionId === 'sess-new'))
+check('子代理（delegationDepth>0 / origin=subagent）的选择类事件仍不进主通道', !rx2.some((m) => m.sessionId === 'sub-9' && m.t === 'sev'))
 check('新建会话已通知（带 blank / origin）', rx2.some((m) => m.t === 'session' && m.kind === 'created' && m.blank === true && m.origin === 'user'))
 check('点赞已转发', rx2.some((m) => m.t === 'sev' && m.k === 'feedback' && m.rating === 'positive'))
 check('取消评分不触发反应', rx2.filter((m) => m.t === 'sev' && m.k === 'feedback').length === 1)

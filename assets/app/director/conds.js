@@ -82,7 +82,8 @@ export function approvalDecided(outcome) {
   FLAG.approval = -1
   syncConds()
   if (outcome === 'allowed-once') perform({ id: 'approval-yes', pri: PRI.CUE, tier: 'core', mood: 'happy', say: 'approvalYes', ms: 2200 })
-  else if (outcome === 'rejected') perform({ id: 'approval-no', pri: PRI.CUE, tier: 'core', mood: 'sad', say: 'approvalNo', ms: 2200 })
+  // 提议被拒：「小丑竟是我自己」。六成演自嘲版（rejectClown，配小丑图），四成是平和的「好吧听主人的」
+  else if (outcome === 'rejected') perform({ id: 'approval-no', pri: PRI.CUE, tier: 'core', mood: 'sad', say: Math.random() < 0.6 ? 'rejectClown' : 'approvalNo', ms: 2600 })
 }
 
 // —— 重试：LLM 调用失败正在重试。恢复后（出了新的回复 / 一轮结束）自动撤 ——

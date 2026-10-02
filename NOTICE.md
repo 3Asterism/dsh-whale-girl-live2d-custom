@@ -23,6 +23,16 @@ MIT license correctly).
 - **版权 / Copyright**：**上善无形 / ZipZipPipe / 氵六青** 三位所有，逐项贡献见 [`AUTHORS.md`](AUTHORS.md)，
   逐文件来源与原《使用须知》原文见 [`PROVENANCE.md`](PROVENANCE.md)
 
+## 2.5 表情包 / Sticker pack
+
+- **范围 / Scope**：`assets/stickers/**`（92 张压缩后的 GIF + `manifest.json`）
+- **版权 / Copyright**：**赤风RED**（<https://space.bilibili.com/356746604>）——「蓝色大肥鱼」系列表情包的作者
+- **许可 / License**：**不适用 MIT，也未套用 CC BY-NC-SA**；使用条款以原作者为准，本项目仅**非商业**随包分发
+  / Not MIT, and not CC BY-NC-SA either; terms are the original author's. Distributed here **non-commercially** only.
+- **修改说明 / Modifications**：从原 157 张中挑选 92 张，裁掉透明空白边、缩至 96×96、25fps、63 色调色板；
+  原图不随仓库分发 / 92 of the original 157 selected, cropped, downscaled to 96×96 at 25fps with a 63-colour palette;
+  the originals are not redistributed. See `tools/build-stickers.py`.
+
 ## 3. 第三方运行时 / Third-party runtime
 
 | 组件 / Component | 许可 / License | 版权 / Copyright |

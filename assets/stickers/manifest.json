@@ -1,0 +1,653 @@
+{
+ "version": 1,
+ "size": 96,
+ "stickers": {
+  "smile": {
+   "file": "smile.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "笑眯眯，开心"
+  },
+  "smile_point": {
+   "file": "smile_point.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "指着笑，嘲笑/调侃"
+  },
+  "thumbs_up": {
+   "file": "thumbs_up.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "点赞认可"
+  },
+  "thumbs_down": {
+   "file": "thumbs_down.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "点踩"
+  },
+  "nod": {
+   "file": "nod.gif",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "认同"
+  },
+  "celebrate": {
+   "file": "celebrate.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "撒彩带庆功"
+  },
+  "cheer": {
+   "file": "cheer.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "举彩球加油"
+  },
+  "toast": {
+   "file": "toast.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "举杯庆祝"
+  },
+  "score10": {
+   "file": "score10.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "打分牌，满分"
+  },
+  "score0": {
+   "file": "score0.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "打分牌，零分"
+  },
+  "expect2": {
+   "file": "expect2.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "星星眼期待"
+  },
+  "crave_fork": {
+   "file": "crave_fork.gif",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "馋，拿刀叉等开饭"
+  },
+  "gift2": {
+   "file": "gift2.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "收到礼物"
+  },
+  "glowstick": {
+   "file": "glowstick.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "应援荧光棒"
+  },
+  "magic": {
+   "file": "magic.gif",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "施魔法"
+  },
+  "love1": {
+   "file": "love1.gif",
+   "ms": 2160,
+   "w": 96,
+   "h": 96,
+   "meme": "爱心环绕，好感"
+  },
+  "love2": {
+   "file": "love2.gif",
+   "ms": 2120,
+   "w": 96,
+   "h": 96,
+   "meme": "捧着爱心"
+  },
+  "loveletter": {
+   "file": "loveletter.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "递情书"
+  },
+  "rose": {
+   "file": "rose.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "送玫瑰"
+  },
+  "hit_heart": {
+   "file": "hit_heart.gif",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "被爱心砸中（直播互动）"
+  },
+  "shy1": {
+   "file": "shy1.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "脸红害羞"
+  },
+  "shy2": {
+   "file": "shy2.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "脸红害羞"
+  },
+  "lick": {
+   "file": "lick.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "舔嘴角，馋/得意"
+  },
+  "headpat": {
+   "file": "headpat.gif",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "被摸头"
+  },
+  "angry": {
+   "file": "angry.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "炸毛生气"
+  },
+  "slipper": {
+   "file": "slipper.gif",
+   "ms": 400,
+   "w": 96,
+   "h": 96,
+   "meme": "举拖鞋，要打人"
+  },
+  "hit_slipper": {
+   "file": "hit_slipper.gif",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "被拖鞋砸中"
+  },
+  "type_annoyed": {
+   "file": "type_annoyed.gif",
+   "ms": 320,
+   "w": 96,
+   "h": 96,
+   "meme": "烦躁地敲键盘"
+  },
+  "work_angry": {
+   "file": "work_angry.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "气呼呼地干活"
+  },
+  "shades_loop": {
+   "file": "shades_loop.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "Deal with it 戴墨镜装酷"
+  },
+  "shades_glint": {
+   "file": "shades_glint.gif",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "墨镜反光，装酷"
+  },
+  "shades_off": {
+   "file": "shades_off.gif",
+   "ms": 1920,
+   "w": 96,
+   "h": 96,
+   "meme": "摘墨镜，认真起来"
+  },
+  "shades_pixel": {
+   "file": "shades_pixel.gif",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "像素墨镜 Deal with it"
+  },
+  "cry1": {
+   "file": "cry1.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "大哭"
+  },
+  "cry2": {
+   "file": "cry2.gif",
+   "ms": 1920,
+   "w": 96,
+   "h": 96,
+   "meme": "抽泣"
+  },
+  "selfcomfort": {
+   "file": "selfcomfort.gif",
+   "ms": 1840,
+   "w": 96,
+   "h": 96,
+   "meme": "出事了自己哄自己「没事没事」"
+  },
+  "sweat": {
+   "file": "sweat.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "流汗，尴尬"
+  },
+  "nervous1": {
+   "file": "nervous1.gif",
+   "ms": 1200,
+   "w": 96,
+   "h": 96,
+   "meme": "紧张冒冷汗"
+  },
+  "nervous2": {
+   "file": "nervous2.gif",
+   "ms": 1200,
+   "w": 96,
+   "h": 96,
+   "meme": "紧张冒冷汗"
+  },
+  "scared": {
+   "file": "scared.gif",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "被吓到"
+  },
+  "exclaim": {
+   "file": "exclaim.gif",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "头顶感叹号，注意"
+  },
+  "dizzy": {
+   "file": "dizzy.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "转圈圈眼"
+  },
+  "question": {
+   "file": "question.gif",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "满头问号"
+  },
+  "blank1": {
+   "file": "blank1.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "发呆"
+  },
+  "blank2": {
+   "file": "blank2.gif",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "瞪眼发呆"
+  },
+  "thinking": {
+   "file": "thinking.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "头顶转圈加载花＝正在思考"
+  },
+  "think_confident": {
+   "file": "think_confident.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "托腮思考，胸有成竹"
+  },
+  "think_serious": {
+   "file": "think_serious.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "托腮认真思考"
+  },
+  "work_nap": {
+   "file": "work_nap.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "趴电脑前睡着"
+  },
+  "dead": {
+   "file": "dead.gif",
+   "ms": 1360,
+   "w": 96,
+   "h": 96,
+   "meme": "吐魂，灵魂出窍"
+  },
+  "trash": {
+   "file": "trash.gif",
+   "ms": 160,
+   "w": 96,
+   "h": 96,
+   "meme": "钻进垃圾桶，想被丢掉"
+  },
+  "type": {
+   "file": "type.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "敲键盘"
+  },
+  "work": {
+   "file": "work.gif",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "对着电脑干活"
+  },
+  "work_tired": {
+   "file": "work_tired.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "疲倦地干活，加班"
+  },
+  "note2": {
+   "file": "note2.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "拿本子记录"
+  },
+  "draw": {
+   "file": "draw.gif",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "画画/设计"
+  },
+  "game": {
+   "file": "game.gif",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "摸鱼打游戏"
+  },
+  "drive": {
+   "file": "drive.gif",
+   "ms": 520,
+   "w": 96,
+   "h": 96,
+   "meme": "开车上路"
+  },
+  "jail": {
+   "file": "jail.gif",
+   "ms": 1240,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "中文 meme「坐牢」：被事情困住、反复折磨，用在「又失败了」"
+  },
+  "fine1": {
+   "file": "fine1.gif",
+   "ms": 1600,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "This is fine：着火了还说没事"
+  },
+  "fine2": {
+   "file": "fine2.gif",
+   "ms": 1600,
+   "w": 96,
+   "h": 96,
+   "opaque": true,
+   "meme": "This is fine：着火了还说没事"
+  },
+  "stopped": {
+   "file": "stopped.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "Windows「已停止工作」弹窗＝崩了"
+  },
+  "clown1": {
+   "file": "clown1.gif",
+   "ms": 2320,
+   "w": 96,
+   "h": 96,
+   "meme": "小丑竟是我自己：一厢情愿被打脸的自嘲"
+  },
+  "clown2": {
+   "file": "clown2.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "小丑竟是我自己：一厢情愿被打脸的自嘲"
+  },
+  "beg": {
+   "file": "beg.gif",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "要饭卖惨，求投喂"
+  },
+  "slack_easy": {
+   "file": "slack_easy.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "上班借口如厕摸鱼（带薪拉屎）"
+  },
+  "slack_hard": {
+   "file": "slack_hard.gif",
+   "ms": 2160,
+   "w": 96,
+   "h": 96,
+   "meme": "上班借口如厕摸鱼，加长版"
+  },
+  "dance_calm": {
+   "file": "dance_calm.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "低皮质醇：放松、没压力、松弛感"
+  },
+  "uno": {
+   "file": "uno.gif",
+   "ms": 1360,
+   "w": 96,
+   "h": 96,
+   "meme": "UNO 反转卡：把锅甩回去/局势翻转"
+  },
+  "idea": {
+   "file": "idea.gif",
+   "ms": 1320,
+   "w": 96,
+   "h": 96,
+   "meme": "头顶灯泡，想到点子"
+  },
+  "takemoney": {
+   "file": "takemoney.gif",
+   "ms": 1120,
+   "w": 96,
+   "h": 96,
+   "meme": "Shut up and take my money"
+  },
+  "swipe": {
+   "file": "swipe.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "刷卡花钱"
+  },
+  "money": {
+   "file": "money.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "眼冒$，见钱眼开"
+  },
+  "redpacket1": {
+   "file": "redpacket1.gif",
+   "ms": 960,
+   "w": 96,
+   "h": 96,
+   "meme": "收红包"
+  },
+  "notice_bits": {
+   "file": "notice_bits.gif",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "直播间提示：Bits"
+  },
+  "notice_heart": {
+   "file": "notice_heart.gif",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "直播间提示：喜欢"
+  },
+  "notice_like": {
+   "file": "notice_like.gif",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "直播间提示：点赞"
+  },
+  "notice_star": {
+   "file": "notice_star.gif",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "直播间提示：收藏"
+  },
+  "notice_coin": {
+   "file": "notice_coin.gif",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "直播间提示：硬币"
+  },
+  "notice_whale": {
+   "file": "notice_whale.gif",
+   "ms": 1720,
+   "w": 96,
+   "h": 96,
+   "meme": "直播间提示：自定义（鲸标）"
+  },
+  "hit_coin": {
+   "file": "hit_coin.gif",
+   "ms": 800,
+   "w": 96,
+   "h": 96,
+   "meme": "被硬币砸中"
+  },
+  "eat_melon": {
+   "file": "eat_melon.gif",
+   "ms": 400,
+   "w": 96,
+   "h": 96,
+   "meme": "吃西瓜"
+  },
+  "eat_popcorn": {
+   "file": "eat_popcorn.gif",
+   "ms": 1640,
+   "w": 96,
+   "h": 96,
+   "meme": "吃爆米花看戏"
+  },
+  "drink": {
+   "file": "drink.gif",
+   "ms": 640,
+   "w": 96,
+   "h": 96,
+   "meme": "喝奶茶"
+  },
+  "cake": {
+   "file": "cake.gif",
+   "ms": 1520,
+   "w": 96,
+   "h": 96,
+   "meme": "端蛋糕，庆祝/甜品"
+  },
+  "hello1": {
+   "file": "hello1.gif",
+   "ms": 2320,
+   "w": 96,
+   "h": 96,
+   "meme": "挥手打招呼"
+  },
+  "hello2": {
+   "file": "hello2.gif",
+   "ms": 2000,
+   "w": 96,
+   "h": 96,
+   "meme": "挥手打招呼"
+  },
+  "arrive": {
+   "file": "arrive.gif",
+   "ms": 2080,
+   "w": 96,
+   "h": 96,
+   "meme": "从远处跑近：我到啦"
+  },
+  "bell": {
+   "file": "bell.gif",
+   "ms": 520,
+   "w": 96,
+   "h": 96,
+   "meme": "摇铃叫人"
+  },
+  "button": {
+   "file": "button.gif",
+   "ms": 320,
+   "w": 96,
+   "h": 96,
+   "meme": "按下按钮"
+  },
+  "sing": {
+   "file": "sing.gif",
+   "ms": 1200,
+   "w": 96,
+   "h": 96,
+   "meme": "哼歌"
+  },
+  "wink": {
+   "file": "wink.gif",
+   "ms": 1480,
+   "w": 96,
+   "h": 96,
+   "meme": "眨眼卖萌"
+  }
+ }
+}

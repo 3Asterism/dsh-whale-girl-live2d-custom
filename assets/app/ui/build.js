@@ -5,6 +5,7 @@ import { $ } from '../core/util.js'
 import { makeBubble } from './bubble.js'
 import { closeHud } from './hud.js'
 import { icon } from './icons.js'
+import { clampPanels } from './layout.js'
 import { addCloseButton, bindComposer, bindMenu } from './panels.js'
 
 // ——————————————————————————————————————————————————————————————
@@ -23,8 +24,11 @@ export function buildUI() {
   const headText = $('span', null, '鲸鱼娘')
   head.append(dot, headText)
   const body = $('div', 'dshp-body')
+  // 台词那一行横排：[文字 | 表情包]。表情包（赤风RED《蓝色大肥鱼》）由 bubble.js 挂在文字后面。
+  const msg = $('div', 'dshp-msg')
+  msg.append(body)
   const foot = $('div', 'dshp-foot')
-  bubbleEl.append(head, body, foot)
+  bubbleEl.append(head, msg, foot)
 
   const dock = $('div', 'dshp-dock')
   const talkBtn = $('button', 'dshp-btn dshp-primary')
@@ -106,7 +110,7 @@ export function buildUI() {
     root,
     stage,
     tab,
-    bubble: makeBubble(bubbleEl, body, foot, dot, headText),
+    bubble: makeBubble(bubbleEl, body, foot, dot, headText, msg, () => clampPanels()),
     composer: { el: composer, ta, send: sendBtn, cancel: cancelBtn },
     menu: { el: menu, tabs, panes, focused: null },
     hud: {

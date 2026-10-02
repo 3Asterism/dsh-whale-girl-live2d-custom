@@ -29,7 +29,13 @@ function rawAct(spec) {
     ms,
   })
   // lineMs：台词气泡的停留时间（按住这类「表演很长、话很短」的场合用）
-  if (spec.line) R.ui.bubble.show(spec.line, { name: '鲸鱼娘', ttl: spec.lineMs || Math.max(ms, 1800) })
+  // 表情包：台词后面跟一张（spec.sticker=false 关掉；选图规则与时长过滤在 ui/sticker-pick.js，气泡里选）。
+  // 没有台词但指定了 sticker：只丢一张图（「正在思考」「要米」「坐牢」这类，图比话更到位）。
+  const hint = spec.sticker === false ? null : { sticker: spec.sticker, say: spec.say, id: spec.id, mood: spec.mood, force: (spec.pri || 0) >= PRI.ALERT }
+  if (spec.line) R.ui.bubble.show(spec.line, { name: '鲸鱼娘', ttl: spec.lineMs || Math.max(ms, 1800), stickerHint: hint })
+  else if (spec.sticker && typeof spec.sticker === 'string' && !(agent.hasStream && (spec.pri || 0) < PRI.ALERT)) {
+    R.ui.bubble.sticker(spec.sticker, { maxMs: spec.stickerMs })
+  }
   if (spec.motion) {
     playOneShot(spec.motion)
     // 只有**真的做动作**时才暂时不盯鼠标；单纯换个表情不该把视线也停掉，

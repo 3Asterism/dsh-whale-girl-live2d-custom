@@ -13,6 +13,8 @@ export const CFG = Object.assign(
     sleepAfterMs: 180000,
     bubbleTtlMs: 0,
     maxWidthRatio: 0.5,
+    stickers: true, // 表情包总开关（宿主默认 true；这里兜底，预览页 / 老宿主没有这个键也行）
+    lowBalanceYuan: 5, // 余额低于多少元（仅 CNY）她「要米」；0 = 不要
     repeatChat: false, // 默认「安静模式」：气泡不显示对话原文（你问了什么/她回了什么），也不写过程流水账（工具路径、工具名、第 N 步、token 小结、分身提示）；她自己的台词、动作、表情、报错照常
   },
   BOOT.config || {},
@@ -29,7 +31,8 @@ export const BASE = '/dsh-pet'
   CFG.flair = saved.flair == null ? true : !!saved.flair
   CFG.nightCloth = saved.nightCloth === true // 夜晚自动换深色桌布：默认关（待机默认外观不能自己变）
   // 自动互动的分项开关（「好感」页里能看到、能关）：默认全开
-  for (const k of ['pageAware', 'keywords', 'routine', 'typing']) CFG[k] = saved[k] == null ? true : !!saved[k]
+  // stickers = 气泡里台词后面的表情包；idleChat = 你发呆时她搭一句话
+  for (const k of ['pageAware', 'keywords', 'routine', 'typing', 'stickers', 'idleChat']) CFG[k] = saved[k] == null ? CFG[k] !== false : !!saved[k]
 }
 
 export const MOTION_PRIORITY = { NONE: 0, IDLE: 1, NORMAL: 2, FORCE: 3 }
